@@ -7,6 +7,9 @@ metadata:
   namespace: test-instance-overriding-customResponses
 spec:
   gatewayClassName: test-default
+  infrastructure:
+    parametersRef:
+      name: test-instance-overriding-customResponses
   listeners:
     - allowedRoutes:
         namespaces:

@@ -3,7 +3,6 @@ local kube = import 'kube-ssa-compat.libsonnet';
 local gw = import 'lib/airlock-microgateway-operator.libsonnet';
 local com = import 'lib/commodore.libjsonnet';
 local kap = import 'lib/kapitan.libjsonnet';
-local prometheus = import 'lib/prometheus.libsonnet';
 
 local inv = kap.inventory();
 
@@ -20,21 +19,6 @@ local metadataNamespace(name) = {
 local has(obj, field) = std.objectHas(obj, field) && obj[field] != null;
 
 // main template for airlock-microgateway
-local extractInstances(field) = {
-  [name]:
-    if has(params.default, field)
-    then std.mergePatch(params.default[field], metadataNamespace(name))
-    else metadataNamespace(name)
-  for name in std.objectFields(params.instances)
-};
-
-local patchObjects(key, objs) = [
-  if has(params.instances[obj.metadata.namespace], key)
-  then std.mergePatch(obj, params.instances[obj.metadata.namespace][key])
-  else obj
-  for obj in objs
-];
-
 local httpRoute(name='') = {
   apiVersion: 'gateway.networking.k8s.io/v1',
   kind: 'HTTPRoute',
@@ -154,47 +138,112 @@ local GatewayCNPIngress(name) =
     },
   };
 
-local gateway_cnps = [
-  cnp
-  for instance in std.objectKeysValues(params.instances)
-  if has_cilium
-  for cnp in [
-    GatewayCNPIngress(instance.key),
-    GatewayCNPEgress(instance.key),
-  ]
-];
-
 local toFiles(objects) = {
   ['%s/%s-%s' % [ object.metadata.namespace, object.kind, object.metadata.name ]]: object
   for object in objects
 };
 
-local prometheusRule(name) = {
-  apiVersion: 'monitoring.coreos.com/v1',
-  kind: 'PrometheusRule',
-  metadata: {
-    name: 'session-storage-rules',
-    namespace: name,
-  },
-  spec: params.sessionMonitoring.prometheusRuleSpec,
-};
+// The final name of a resource, derived from the instance name unless the
+// user overrides metadata.name in the instance parameters.
+local resourceName(field, name) =
+  if has(params.instances[name], field)
+     && has(params.instances[name][field], 'metadata')
+     && has(params.instances[name][field].metadata, 'name')
+  then params.instances[name][field].metadata.name
+  else kube.hyphenate(name);
 
-local sessionStoreRules = {
-  ['%s/SessionMonitoring' % instance.key]: prometheusRule(instance.key)
-  for instance in std.objectKeysValues(params.instances)
-};
+// Cross-references derived from the instance name, injected between the
+// default and instance parameters so explicit user overrides still win.
+local derivedRefs(field, name) =
+  local gatewayName = resourceName('gateway', name);
+  if field == 'gateway' then {
+    spec: {
+      infrastructure: {
+        parametersRef: {
+          name: resourceName('gatewayParameters', name),
+        },
+      },
+    },
+  } else if field == 'gatewayParameters' then {
+    spec: {
+      defaults: {
+        sessionHandlingRef: {
+          name: resourceName('sessionHandling', name),
+        },
+      },
+    },
+  } else if field == 'sessionHandling' then {
+    spec: {
+      persistence: {
+        redisProviderRef: {
+          name: resourceName('redisProvider', name),
+        },
+      },
+    },
+  } else if field == 'egressNetpol' then {
+    spec: {
+      podSelector: {
+        matchLabels: {
+          'gateway.networking.k8s.io/gateway-name': gatewayName,
+        },
+      },
+    },
+  } else {};
 
+// Fill in the derived Gateway name for each parentRef that doesn't set one.
+local withGatewayRefs(route, gatewayName) =
+  if has(route, 'spec') && has(route.spec, 'parentRefs') then
+    route {
+      spec+: {
+        parentRefs: [
+          ref + (if has(ref, 'name') then {} else { name: gatewayName })
+          for ref in route.spec.parentRefs
+        ],
+      },
+    }
+  else
+    route;
+
+// Generate a single resource of the given type for one instance.
+// The generator output is merged with the default parameters, the derived
+// cross-references and the instance-specific parameters, in that order.
+local resource(field, generator, name) =
+  std.mergePatch(
+    std.mergePatch(
+      generator(kube.hyphenate(name)) + com.makeMergeable(
+        if has(params.default, field)
+        then std.mergePatch(params.default[field], metadataNamespace(name))
+        else metadataNamespace(name)
+      ),
+      derivedRefs(field, name)
+    ),
+    if has(params.instances[name], field) then params.instances[name][field] else {}
+  );
+
+// Instance-independent resources
+local monitoringResources = import 'monitoring.jsonnet';
+
+// All per-instance resources, generated in an instance-outer loop
+local instanceResources = std.flatMap(
+  function(instance)
+    [
+      resource('gateway', gw.Gateway, instance.key),
+      resource('gatewayParameters', gw.GatewayParameters, instance.key),
+      withGatewayRefs(resource('httpRedirect', httpRoute, instance.key), resourceName('gateway', instance.key)),
+      resource('pdb', pdb, instance.key),
+      resource('egressNetpol', egressNetpol, instance.key),
+      resource('sessionHandling', gw.SessionHandling, instance.key),
+      resource('redisProvider', gw.RedisProvider, instance.key),
+    ] + if has_cilium then [
+      GatewayCNPIngress(instance.key),
+      GatewayCNPEgress(instance.key),
+    ] else [],
+  std.objectKeysValues(params.instances)
+);
 
 // Define outputs below
-toFiles(patchObjects('gateway', com.generateResources(extractInstances('gateway'), gw.Gateway))) +
-toFiles(patchObjects('gatewayParameters', com.generateResources(extractInstances('gatewayParameters'), gw.GatewayParameters))) +
-toFiles(patchObjects('httpRedirect', com.generateResources(extractInstances('httpRedirect'), httpRoute))) +
-toFiles(patchObjects('pdb', com.generateResources(extractInstances('pdb'), pdb))) +
-toFiles(patchObjects('egressNetpol', com.generateResources(extractInstances('egressNetpol'), egressNetpol))) +
-toFiles(patchObjects('sessionHandling', com.generateResources(extractInstances('sessionHandling'), gw.SessionHandling))) +
-toFiles(patchObjects('redisProvider', com.generateResources(extractInstances('redisProvider'), gw.RedisProvider))) +
-toFiles(gateway_cnps) +
+toFiles(instanceResources) +
 namespaces
-+ (import 'monitoring.jsonnet')
++ monitoringResources
 + (import 'custom-responses.jsonnet')
 + (import 'lib/debug.jsonnet')

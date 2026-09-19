@@ -15,6 +15,9 @@ spec:
     standalone:
       host: redis-master
       port: 6379
+  persistence:
+    redisProviderRef:
+      name: test-instance-01
   timeouts:
     connect: 10s
     maxDuration: 2s

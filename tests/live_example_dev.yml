@@ -178,7 +178,6 @@ parameters:
               parametersRef:
                 group: microgateway.airlock.com
                 kind: GatewayParameters
-                name: parameters-dev-01
             listeners:
               - name: http-default
                 protocol: HTTP
@@ -189,8 +188,6 @@ parameters:
               downstream:
                 remoteIP:
                   proxyProtocol: {}
-              sessionHandlingRef:
-                name: redis-session
             features:
               envoyExtensionPolicyEnabled: true
               insecureTLSAllowed: true
@@ -233,10 +230,6 @@ parameters:
             logging:
               level: info
         pdb:
-          metadata:
-            labels:
-              gateway.networking.k8s.io/gateway-name: vshn-airlock-dev-01
-            name: vshn-airlock-dev-01
           spec:
             minAvailable: 1
             selector:
@@ -274,10 +267,6 @@ parameters:
             name: redis-session
           spec:
             mode: Enforce
-            persistence:
-              # Specify the Redis database where sessions should be stored
-              redisProviderRef:
-                name: redis-provider
             defaultTimeouts:
               # Specify idle timeout of a session
               idle: 135m # 2h 15m
@@ -292,7 +281,6 @@ parameters:
             podSelector:
               matchLabels:
                 gateway.networking.k8s.io/gateway-class-name: microgateway-cloudscale
-                gateway.networking.k8s.io/gateway-name: vshn-airlock-dev-01
             policyTypes: [Egress]
             egress:
               # allow Microgateway Operator
@@ -381,7 +369,6 @@ parameters:
           spec:
             parentRefs:
               - group: gateway.networking.k8s.io
-                name: vshn-airlock-dev-01
                 kind: Gateway
                 sectionName: http-default
             hostnames:
