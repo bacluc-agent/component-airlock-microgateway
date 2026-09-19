@@ -7,6 +7,9 @@ metadata:
   namespace: test-instance-01
 spec:
   gatewayClassName: test-instances-01
+  infrastructure:
+    parametersRef:
+      name: test-instance-01
   listeners:
     - allowedRoutes:
         namespaces:

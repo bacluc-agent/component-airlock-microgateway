@@ -9,7 +9,7 @@ spec:
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
-      name: vshn-instances-test-01
+      name: test-instance-01
       sectionName: http-default
   rules:
     - filters:

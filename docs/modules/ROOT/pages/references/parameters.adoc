@@ -6,6 +6,17 @@ Api reference for Gateway API can be found here: https://gateway-api.sigs.k8s.io
 
 Api reference for Airlock Microgateway CRs can be found here: https://docs.airlock.com/
 
+== Derived names and cross-references
+
+Resource names default to the (hyphenated) instance name, and the following cross-references are derived automatically. They can still be overridden per instance.
+
+* `gateway.spec.infrastructure.parametersRef.name` — the GatewayParameters name
+* `gatewayParameters.spec.defaults.sessionHandlingRef.name` — the SessionHandling name (or the `sessionHandling.metadata.name` override)
+* `sessionHandling.spec.persistence.redisProviderRef.name` — the RedisProvider name (or the `redisProvider.metadata.name` override)
+* `httpRedirect.spec.parentRefs[].name` — the Gateway name
+* `pdb.metadata.name`/`namespace`/`labels` — the instance name
+* `egressNetpol.spec.podSelector.matchLabels['gateway.networking.k8s.io/gateway-name']` — the Gateway name
+
 == `namespace`
 
 [horizontal]

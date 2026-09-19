@@ -6,6 +6,9 @@ metadata:
   name: test-instance-02
   namespace: test-instance-02
 spec:
+  defaults:
+    sessionHandlingRef:
+      name: test-instance-02
   kubernetes:
     deployment:
       replicas: 2

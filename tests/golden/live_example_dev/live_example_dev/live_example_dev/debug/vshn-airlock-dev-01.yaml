@@ -146,7 +146,6 @@ data:
         podSelector:
           matchLabels:
             gateway.networking.k8s.io/gateway-class-name: "microgateway-cloudscale"
-            gateway.networking.k8s.io/gateway-name: "vshn-airlock-dev-01"
         policyTypes:
         - "Egress"
     gateway:
@@ -159,7 +158,6 @@ data:
           parametersRef:
             group: "microgateway.airlock.com"
             kind: "GatewayParameters"
-            name: "parameters-dev-01"
         listeners:
         - name: "http-default"
           port: 80
@@ -247,8 +245,6 @@ data:
           downstream:
             remoteIP:
               proxyProtocol: {}
-          sessionHandlingRef:
-            name: "redis-session"
         features:
           envoyExtensionPolicyEnabled: true
           insecureTLSAllowed: true
@@ -296,7 +292,6 @@ data:
         parentRefs:
         - group: "gateway.networking.k8s.io"
           kind: "Gateway"
-          name: "vshn-airlock-dev-01"
           sectionName: "http-default"
         rules:
         - filters:
@@ -313,10 +308,6 @@ data:
       annotations: {}
       labels: {}
     pdb:
-      metadata:
-        labels:
-          gateway.networking.k8s.io/gateway-name: "vshn-airlock-dev-01"
-        name: "vshn-airlock-dev-01"
       spec:
         minAvailable: 1
         selector:
@@ -359,9 +350,6 @@ data:
           idle: "135m"
           lifetime: "735m"
         mode: "Enforce"
-        persistence:
-          redisProviderRef:
-            name: "redis-provider"
 kind: ConfigMap
 metadata:
   labels:

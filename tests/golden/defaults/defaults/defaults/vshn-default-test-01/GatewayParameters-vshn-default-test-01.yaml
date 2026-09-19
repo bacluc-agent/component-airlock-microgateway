@@ -11,7 +11,7 @@ spec:
       remoteIP:
         proxyProtocol: {}
     sessionHandlingRef:
-      name: redis-session
+      name: vshn-default-test-01
   features:
     envoyExtensionPolicyEnabled: true
     insecureTLSAllowed: true

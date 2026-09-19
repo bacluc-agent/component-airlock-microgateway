@@ -111,11 +111,6 @@ parameters:
               port: 80
               protocol: default
       pdb:
-        metadata:
-          labels:
-            gateway.networking.k8s.io/gateway-name: vshn-instances-test-01
-          name: vshn-instances-test-01
-          namespace: vshn-instances-test-01
         spec:
           minAvailable: 1
           selector:
@@ -175,7 +170,6 @@ parameters:
           podSelector:
             matchLabels:
               gateway.networking.k8s.io/gateway-class-name: microgateway-cloudscale
-              gateway.networking.k8s.io/gateway-name: vshn-instances-test-01
           policyTypes: [Egress]
           egress:
             # allow Microgateway Operator
@@ -189,11 +183,9 @@ parameters:
       httpRedirect:
         metadata:
           name: http-filter-redirect
-          namespace: vshn-instances-test-01
         spec:
           parentRefs:
             - group: gateway.networking.k8s.io
-              name: vshn-instances-test-01
               kind: Gateway
               sectionName: http-default
           hostnames:
@@ -291,8 +283,6 @@ parameters:
             downstream:
               remoteIP:
                 proxyProtocol: {}
-            sessionHandlingRef:
-              name: redis-session
           features:
             envoyExtensionPolicyEnabled: true
             insecureTLSAllowed: true
