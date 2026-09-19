@@ -7,6 +7,9 @@ metadata:
   namespace: vshn-default-test-01
 spec:
   gatewayClassName: test-default
+  infrastructure:
+    parametersRef:
+      name: vshn-default-test-01
   listeners:
     - allowedRoutes:
         namespaces:

@@ -5,3 +5,7 @@ metadata:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
   name: test-instance-02
   namespace: test-instance-02
+spec:
+  infrastructure:
+    parametersRef:
+      name: test-instance-02

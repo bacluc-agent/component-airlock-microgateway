@@ -88,7 +88,7 @@ spec:
       remoteIP:
         proxyProtocol: {}
     sessionHandlingRef:
-      name: redis-session
+      name: test-instance-overriding-customResponses
   features:
     envoyExtensionPolicyEnabled: true
     insecureTLSAllowed: true

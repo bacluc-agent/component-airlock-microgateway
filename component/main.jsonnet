@@ -143,15 +143,79 @@ local toFiles(objects) = {
   for object in objects
 };
 
+// The final name of a resource, derived from the instance name unless the
+// user overrides metadata.name in the instance parameters.
+local resourceName(field, name) =
+  if has(params.instances[name], field)
+     && has(params.instances[name][field], 'metadata')
+     && has(params.instances[name][field].metadata, 'name')
+  then params.instances[name][field].metadata.name
+  else kube.hyphenate(name);
+
+// Cross-references derived from the instance name, injected between the
+// default and instance parameters so explicit user overrides still win.
+local derivedRefs(field, name) =
+  local gatewayName = kube.hyphenate(name);
+  if field == 'gateway' then {
+    spec: {
+      infrastructure: {
+        parametersRef: {
+          name: resourceName('gatewayParameters', name),
+        },
+      },
+    },
+  } else if field == 'gatewayParameters' then {
+    spec: {
+      defaults: {
+        sessionHandlingRef: {
+          name: resourceName('sessionHandling', name),
+        },
+      },
+    },
+  } else if field == 'sessionHandling' then {
+    spec: {
+      persistence: {
+        redisProviderRef: {
+          name: resourceName('redisProvider', name),
+        },
+      },
+    },
+  } else if field == 'egressNetpol' then {
+    spec: {
+      podSelector: {
+        matchLabels: {
+          'gateway.networking.k8s.io/gateway-name': gatewayName,
+        },
+      },
+    },
+  } else {};
+
+// Fill in the derived Gateway name for each parentRef that doesn't set one.
+local withGatewayRefs(route, gatewayName) =
+  if has(route, 'spec') && has(route.spec, 'parentRefs') then
+    route {
+      spec+: {
+        parentRefs: [
+          ref + (if has(ref, 'name') then {} else { name: gatewayName })
+          for ref in route.spec.parentRefs
+        ],
+      },
+    }
+  else
+    route;
+
 // Generate a single resource of the given type for one instance.
-// The generator output is merged with the default parameters and the
-// instance-specific parameters, in that order.
+// The generator output is merged with the default parameters, the derived
+// cross-references and the instance-specific parameters, in that order.
 local resource(field, generator, name) =
   std.mergePatch(
-    generator(kube.hyphenate(name)) + com.makeMergeable(
-      if has(params.default, field)
-      then std.mergePatch(params.default[field], metadataNamespace(name))
-      else metadataNamespace(name)
+    std.mergePatch(
+      generator(kube.hyphenate(name)) + com.makeMergeable(
+        if has(params.default, field)
+        then std.mergePatch(params.default[field], metadataNamespace(name))
+        else metadataNamespace(name)
+      ),
+      derivedRefs(field, name)
     ),
     if has(params.instances[name], field) then params.instances[name][field] else {}
   );
@@ -165,7 +229,7 @@ local instanceResources = std.flatMap(
     [
       resource('gateway', gw.Gateway, instance.key),
       resource('gatewayParameters', gw.GatewayParameters, instance.key),
-      resource('httpRedirect', httpRoute, instance.key),
+      withGatewayRefs(resource('httpRedirect', httpRoute, instance.key), kube.hyphenate(instance.key)),
       resource('pdb', pdb, instance.key),
       resource('egressNetpol', egressNetpol, instance.key),
       resource('sessionHandling', gw.SessionHandling, instance.key),

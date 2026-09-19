@@ -77,7 +77,6 @@ data:
         podSelector:
           matchLabels:
             gateway.networking.k8s.io/gateway-class-name: "microgateway-cloudscale"
-            gateway.networking.k8s.io/gateway-name: "vshn-instances-test-01"
         policyTypes:
         - "Egress"
     gateway:
@@ -179,8 +178,6 @@ data:
           downstream:
             remoteIP:
               proxyProtocol: {}
-          sessionHandlingRef:
-            name: "redis-session"
         features:
           envoyExtensionPolicyEnabled: true
           insecureTLSAllowed: true
@@ -212,14 +209,12 @@ data:
     httpRedirect:
       metadata:
         name: "http-filter-redirect"
-        namespace: "vshn-instances-test-01"
       spec:
         hostnames:
         - "*.test.com"
         parentRefs:
         - group: "gateway.networking.k8s.io"
           kind: "Gateway"
-          name: "vshn-instances-test-01"
           sectionName: "http-default"
         rules:
         - filters:
@@ -238,11 +233,6 @@ data:
         appuio.ch/waf: "airlock"
         vshn.microgateway/redis-sync-secret: "true"
     pdb:
-      metadata:
-        labels:
-          gateway.networking.k8s.io/gateway-name: "vshn-instances-test-01"
-        name: "vshn-instances-test-01"
-        namespace: "vshn-instances-test-01"
       spec:
         minAvailable: 1
         selector:
