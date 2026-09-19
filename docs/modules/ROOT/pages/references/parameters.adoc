@@ -10,6 +10,8 @@ Api reference for Airlock Microgateway CRs can be found here: https://docs.airlo
 
 Resource names default to the (hyphenated) instance name, and the following cross-references are derived automatically. They can still be overridden per instance.
 
+This follows the same multi-instance pattern as https://github.com/projectsyn/component-argocd[component-argocd]: each instance key becomes the namespace and the (hyphenated) name of the resources created for that instance.
+
 * `gateway.spec.infrastructure.parametersRef.name` — the GatewayParameters name
 * `gatewayParameters.spec.defaults.sessionHandlingRef.name` — the SessionHandling name (or the `sessionHandling.metadata.name` override)
 * `sessionHandling.spec.persistence.redisProviderRef.name` — the RedisProvider name (or the `redisProvider.metadata.name` override)
