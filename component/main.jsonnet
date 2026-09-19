@@ -155,7 +155,7 @@ local resourceName(field, name) =
 // Cross-references derived from the instance name, injected between the
 // default and instance parameters so explicit user overrides still win.
 local derivedRefs(field, name) =
-  local gatewayName = kube.hyphenate(name);
+  local gatewayName = resourceName('gateway', name);
   if field == 'gateway' then {
     spec: {
       infrastructure: {
@@ -229,7 +229,7 @@ local instanceResources = std.flatMap(
     [
       resource('gateway', gw.Gateway, instance.key),
       resource('gatewayParameters', gw.GatewayParameters, instance.key),
-      withGatewayRefs(resource('httpRedirect', httpRoute, instance.key), kube.hyphenate(instance.key)),
+      withGatewayRefs(resource('httpRedirect', httpRoute, instance.key), resourceName('gateway', instance.key)),
       resource('pdb', pdb, instance.key),
       resource('egressNetpol', egressNetpol, instance.key),
       resource('sessionHandling', gw.SessionHandling, instance.key),
