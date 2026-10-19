@@ -194,11 +194,24 @@ parameters:
 instance.yml
 [source,yaml]
 ----
+applications:
+  - airlock-microgateway
+  - gateway-api
+
 classes:
   - bodies
   - refs
 
 parameters:
+  # Fetch the libs required by the component's Gateway API helpers
+  kapitan:
+    dependencies:
+      - type: https
+        source: https://raw.githubusercontent.com/appuio/component-airlock-microgateway-operator/master/lib/airlock-microgateway-operator.libsonnet
+        output_path: vendor/lib/airlock-microgateway-operator.libsonnet
+      - type: https
+        source: https://raw.githubusercontent.com/projectsyn/component-gateway-api/master/lib/gateway-api.libsonnet
+        output_path: vendor/lib/gateway-api.libsonnet
   airlock_microgateway:
     instances:
       example-instance: {}
