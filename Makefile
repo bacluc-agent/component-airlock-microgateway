@@ -51,9 +51,11 @@ docs-serve: ## Preview the documentation
 
 .PHONY: test
 test: commodore_args += -f tests/$(instance).yml
+test: commodore_args += $(foreach f,$($(instance)_extra_f),-f $(f))
 test: .compile ## Compile the component
 .PHONY: gen-golden
 gen-golden: commodore_args += -f tests/$(instance).yml
+gen-golden: commodore_args += $(foreach f,$($(instance)_extra_f),-f $(f))
 gen-golden: clean .compile ## Update the reference version for target `golden-diff`.
 	@rm -rf tests/golden/$(instance)
 	@mkdir -p tests/golden/$(instance)
@@ -61,6 +63,7 @@ gen-golden: clean .compile ## Update the reference version for target `golden-di
 
 .PHONY: golden-diff
 golden-diff: commodore_args += -f tests/$(instance).yml
+golden-diff: commodore_args += $(foreach f,$($(instance)_extra_f),-f $(f))
 golden-diff: clean .compile ## Diff compile output against the reference version. Review output and run `make gen-golden golden-diff` if this target fails.
 	@git diff --exit-code --minimal --no-index -- tests/golden/$(instance) compiled/
 

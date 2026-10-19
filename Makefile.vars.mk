@@ -51,3 +51,10 @@ KUBENT_DOCKER   ?= $(DOCKER_CMD) $(DOCKER_ARGS) $(root_volume) --entrypoint=/app
 
 instance ?= defaults
 test_instances = tests/defaults.yml tests/multiple_instances.yml tests/live_example_dev.yml tests/sessionStoreMonitoring.yml tests/monitoring.yml
+
+# Additional reclass class files passed via `-f` for specific test instances.
+defaults_extra_f               ?=
+multiple_instances_extra_f     ?= tests/custom-responses-bodies.yml tests/custom-responses-refs.yml
+live_example_dev_extra_f       ?= tests/custom-responses-bodies.yml tests/custom-responses-refs.yml
+sessionStoreMonitoring_extra_f ?=
+monitoring_extra_f             ?=
