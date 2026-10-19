@@ -112,6 +112,11 @@ data:
           customResponses:
             local:
             - customResponseRef:
+                name: "301"
+              statusCodeCondition:
+                matcher:
+                  exact: 301
+            - customResponseRef:
                 name: "401"
               statusCodeCondition:
                 matcher:
@@ -219,16 +224,6 @@ data:
               nodeSelector:
                 node-role.kubernetes.io/infra: ""
             replicas: 2
-    gatewayParamters:
-      spec:
-        defaults:
-          customResponses:
-            local:
-            - customResponseRef:
-                name: "301"
-              statusCodeCondition:
-                matcher:
-                  exact: 301
     httpRedirect:
       metadata:
         name: "http-filter-redirect"

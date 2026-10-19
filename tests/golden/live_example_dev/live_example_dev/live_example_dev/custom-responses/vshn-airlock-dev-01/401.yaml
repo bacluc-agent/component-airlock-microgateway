@@ -36,4 +36,4 @@ spec:
           </body>
           </html>
       contentType: text/html
-      headers: null
+      headers: {}

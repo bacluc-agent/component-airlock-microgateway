@@ -33,7 +33,7 @@ data:
               </body>
               </html>
           contentType: "text/html"
-          headers: null
+          headers: {}
       "403":
         content:
         - body:
