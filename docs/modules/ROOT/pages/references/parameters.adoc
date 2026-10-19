@@ -52,15 +52,42 @@ default:
         externalNameServicesAllowed: true
 ----
 
-== `default.gatewayParameters.defaults.customResponses`
+== `default.gatewayParameters.spec.defaults.customResponses`
 
 Allows to set the local and upstream customResponses, see
 https://docs.airlock.com/microgateway/5.0/index/api/crds/gateway-parameters/v1alpha1/index.html#gatewayparametersspecdefaultscustomresponses[Airlock Microgateway docs].
 
-The first matching entry is used.
-It is not possible to override an existing range of the defaults in an instance because the additional customResponse configurations are appended because it is an array.
+The first matching entry wins, so list exact status codes before catch-all ranges.
+
+`instances.<instance>.gatewayParameters` is merged onto the defaults with a jsonnet `mergePatch`.
+A `mergePatch` *replaces* arrays instead of appending to them, so an instance override of `...customResponses.local` or `...customResponses.upstream` must repeat the complete desired array, including all default entries which should be kept.
+To extend the default list instead, compose it from multiple reclass classes: reclass appends the list entries contributed by different classes.
 
 For placeHolders see https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/substitution_formatter#config-advanced-substitution-operators[envoy substitution operators].
+
+== `default.customResponses`
+
+Maps a name to the `spec` of a `CustomResponse` object, see the
+https://docs.airlock.com/microgateway/5.0/index/api/crds/custom-response/v1alpha1/index.html[Airlock Microgateway CustomResponse docs].
+Each key creates a `microgateway.airlock.com/v1alpha1` `CustomResponse` with that name.
+
+[source,yaml]
+----
+default:
+  customResponses:
+    "401":
+      content:
+        - contentType: text/html
+          body:
+            value: |
+              <h1>Access Denied</h1>
+----
+
+The response body is either inlined in `spec.content[].body.value` or loaded from a `ConfigMap` via `spec.content[].body.valueFrom.configMapKeyRef`.
+
+The `customResponseRef.name` used in `gatewayParameters.spec.defaults.customResponses.{local,upstream}` must match one of these keys.
+
+`instances.<instance>.customResponses` is merged onto `default.customResponses` per key with `mergePatch`, so an instance can override or add individual responses without repeating the others.
 
 == Example
 
@@ -68,58 +95,131 @@ For placeHolders see https://www.envoyproxy.io/docs/envoy/latest/configuration/a
 ----
 default:
   gatewayParameters:
-    defaults:
-      customResponses:
-        local:
-          - statusCodeCondition:
-              matcher:
-                exact: 401
-            customResponseRef:
-              name: "401"
-          - statusCodeCondition:
-              matcher:
-                range:
-                  from: 400
-                  to: 499
-            customResponseRef:
-              name: "4xx"
+    spec:
+      defaults:
+        customResponses:
+          local:
+            - statusCodeCondition:
+                matcher:
+                  exact: 401
+              customResponseRef:
+                name: "401"
+            - statusCodeCondition:
+                matcher:
+                  range:
+                    start: 400
+                    end: 499
+              customResponseRef:
+                name: "4xx"
   customResponses:
-        "401":
-          content:
-            - contentType: text/html
-              body:
-                value: |
-                  <!DOCTYPE html>
-                  <html lang="de">
-                  <head>
-                      <meta charset="utf-8">
-                      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                      <title>Customer Error 401</title>
-                      <style>
-                          @media (max-height: 550px) {
-                              body { overflow-y: auto; height: auto; }
-                          }
-                      </style>
-                  </head>
-                  <body>
-                  <main>
-                      <h1><span class="textcode">Error </span>401</h1>
-                      <section>
-                        <h2 lang="de">Access Denied</h2>
-                        <p lang="de">You can't access this application.<br>
-                        Additional info: <a href="https://support.customer.com">Support</a>.</p>
-                      </section>
-                  </main>
-                  <footer>
-                      REQUEST ID: %STREAM_ID%
-                  </footer>
-                  </body>
-                  </html>
-              headers: {}
+    "401":
+      content:
+        - contentType: text/html
+          body:
+            value: |
+              <!DOCTYPE html>
+              <html lang="de">
+              <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <title>Customer Error 401</title>
+                  <style>
+                      @media (max-height: 550px) {
+                          body { overflow-y: auto; height: auto; }
+                      }
+                  </style>
+              </head>
+              <body>
+              <main>
+                  <h1><span class="textcode">Error </span>401</h1>
+                  <section>
+                    <h2 lang="de">Access Denied</h2>
+                    <p lang="de">You can't access this application.<br>
+                    Additional info: <a href="https://support.customer.com">Support</a>.</p>
+                  </section>
+              </main>
+              <footer>
+                  REQUEST ID: %STREAM_ID%
+              </footer>
+              </body>
+              </html>
+          headers: {}
+    "4xx":
+      content:
+        - contentType: text/html
+          body:
+            value: |
+              %RESPONSE_CODE%
+----
+
+== Class-based setup
+
+Define the response bodies and the gateway parameter refs in reclass classes and include them from the instance class.
+
+bodies.yml
+[source,yaml]
+----
+parameters:
+  airlock_microgateway:
+    default:
+      customResponses:
         "4xx":
           content:
             - contentType: text/html
               body:
                 value: |
                   %RESPONSE_CODE%
+----
+
+refs.yml
+[source,yaml]
+----
+parameters:
+  airlock_microgateway:
+    default:
+      gatewayParameters:
+        spec:
+          defaults:
+            customResponses:
+              local:
+                - statusCodeCondition:
+                    matcher:
+                      range:
+                        start: 400
+                        end: 499
+                  customResponseRef:
+                    name: "4xx"
+----
+
+instance.yml
+[source,yaml]
+----
+applications:
+  - airlock-microgateway
+  - gateway-api
+
+classes:
+  - bodies
+  - refs
+
+parameters:
+  # Fetch the libs required by the component's Gateway API helpers
+  kapitan:
+    dependencies:
+      - type: https
+        source: https://raw.githubusercontent.com/appuio/component-airlock-microgateway-operator/master/lib/airlock-microgateway-operator.libsonnet
+        output_path: vendor/lib/airlock-microgateway-operator.libsonnet
+      - type: https
+        source: https://raw.githubusercontent.com/projectsyn/component-gateway-api/master/lib/gateway-api.libsonnet
+        output_path: vendor/lib/gateway-api.libsonnet
+  airlock_microgateway:
+    instances:
+      example-instance: {}
+----
+
+Each class file has to be passed to the compilation so that its name is available as a class, for example:
+
+[source,bash]
+----
+commodore component compile . --search-paths . -f bodies.yml -f refs.yml -f instance.yml
 ----

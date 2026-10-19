@@ -3,6 +3,10 @@ applications:
   - cilium
   - gateway-api
 
+classes:
+  - custom-responses-bodies
+  - custom-responses-refs
+
 parameters:
   # Dependency for testing with upstream lib
   kapitan:
@@ -16,86 +20,6 @@ parameters:
   airlock_microgateway:
     debug: true
     default:
-      gatewayParameters:
-        spec:
-          defaults:
-            customResponses:
-              local:
-                - statusCodeCondition:
-                    matcher:
-                      exact: 401
-                  customResponseRef:
-                    name: "401"
-                - statusCodeCondition:
-                    matcher:
-                      exact: 403
-                  customResponseRef:
-                    name: "403"
-                - statusCodeCondition:
-                    matcher:
-                      exact: 404
-                  customResponseRef:
-                    name: "404"
-                - statusCodeCondition:
-                    matcher:
-                      range:
-                        from: 400
-                        to: 499
-                  customResponseRef:
-                    name: "4xx"
-                - statusCodeCondition:
-                    matcher:
-                      exact: 502
-                  customResponseRef:
-                    name: "502"
-                - statusCodeCondition:
-                    matcher:
-                      range:
-                        from: 500
-                        to: 599
-                  customResponseRef:
-                    name: "5xx"
-              upstream:
-                - responseConditions:
-                    statusCode:
-                      matcher:
-                        exact: 401
-                  customResponseRef:
-                    name: "401"
-                - responseConditions:
-                    statusCode:
-                      matcher:
-                        exact: 403
-                  customResponseRef:
-                    name: "403"
-                - responseConditions:
-                    statusCode:
-                      matcher:
-                        exact: 404
-                  customResponseRef:
-                    name: "404"
-                - responseConditions:
-                    statusCode:
-                      matcher:
-                        range:
-                          start: 400
-                          end: 499
-                  customResponseRef:
-                    name: "4xx"
-                - responseConditions:
-                    statusCode:
-                      matcher:
-                        exact: 502
-                  customResponseRef:
-                    name: "502"
-                - responseConditions:
-                    statusCode:
-                      matcher:
-                        range:
-                          start: 500
-                          end: 599
-                  customResponseRef:
-                    name: "5xx"
       namespace:
         labels:
           appuio.ch/waf: airlock
@@ -209,69 +133,6 @@ parameters:
                   requestRedirect:
                     scheme: https
                     statusCode: 301
-      customResponses:
-        "401":
-          content:
-            - contentType: text/html
-              body:
-                value: |
-                  <!DOCTYPE html>
-                  <html lang="de">
-                  <head>
-                      <meta charset="utf-8">
-                      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                      <title>Customer Error 401</title>
-                      <style>
-                          @media (max-height: 550px) {
-                              body { overflow-y: auto; height: auto; }
-                          }
-                      </style>
-                  </head>
-                  <body>
-                  <main>
-                      <h1><span class="textcode">Error </span>401</h1>
-                      <section>
-                        <h2 lang="de">Access Denied</h2>
-                        <p lang="de">You can't access this application.<br>
-                        Additional info: <a href="https://support.customer.com">Support</a>.</p>
-                      </section>
-                  </main>
-                  <footer>
-                      REQUEST ID: %STREAM_ID%
-                  </footer>
-                  </body>
-                  </html>
-              headers: {}
-        "403":
-          content:
-            - contentType: text/html
-              body:
-                value: |
-                  %RESPONSE_CODE%
-        "404":
-          content:
-            - contentType: text/html
-              body:
-                value: |
-                  %RESPONSE_CODE%
-        "4xx":
-          content:
-            - contentType: text/html
-              body:
-                value: |
-                  %RESPONSE_CODE%
-        "502":
-          content:
-            - contentType: text/html
-              body:
-                value: |
-                  %RESPONSE_CODE%
-        "5xx":
-          content:
-            - contentType: text/html
-              body:
-                value: |
-                  %RESPONSE_CODE%
 
   multiple_instances:
     default:
@@ -352,7 +213,7 @@ parameters:
                     node-role.kubernetes.io/test: ""
       test-instance-02: {}
       test-instance-overriding-customResponses:
-        gatewayParamters:
+        gatewayParameters:
           spec:
             defaults:
               customResponses:
@@ -362,6 +223,40 @@ parameters:
                         exact: 301
                     customResponseRef:
                       name: "301"
+                  - statusCodeCondition:
+                      matcher:
+                        exact: 401
+                    customResponseRef:
+                      name: "401"
+                  - statusCodeCondition:
+                      matcher:
+                        exact: 403
+                    customResponseRef:
+                      name: "403"
+                  - statusCodeCondition:
+                      matcher:
+                        exact: 404
+                    customResponseRef:
+                      name: "404"
+                  - statusCodeCondition:
+                      matcher:
+                        range:
+                          start: 400
+                          end: 499
+                    customResponseRef:
+                      name: "4xx"
+                  - statusCodeCondition:
+                      matcher:
+                        exact: 502
+                    customResponseRef:
+                      name: "502"
+                  - statusCodeCondition:
+                      matcher:
+                        range:
+                          start: 500
+                          end: 599
+                    customResponseRef:
+                      name: "5xx"
         customResponses:
           "403":
             content:

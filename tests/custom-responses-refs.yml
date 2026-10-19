@@ -1,0 +1,83 @@
+parameters:
+  airlock_microgateway:
+    default:
+      gatewayParameters:
+        spec:
+          defaults:
+            customResponses:
+              local:
+                - statusCodeCondition:
+                    matcher:
+                      exact: 401
+                  customResponseRef:
+                    name: "401"
+                - statusCodeCondition:
+                    matcher:
+                      exact: 403
+                  customResponseRef:
+                    name: "403"
+                - statusCodeCondition:
+                    matcher:
+                      exact: 404
+                  customResponseRef:
+                    name: "404"
+                - statusCodeCondition:
+                    matcher:
+                      range:
+                        start: 400
+                        end: 499
+                  customResponseRef:
+                    name: "4xx"
+                - statusCodeCondition:
+                    matcher:
+                      exact: 502
+                  customResponseRef:
+                    name: "502"
+                - statusCodeCondition:
+                    matcher:
+                      range:
+                        start: 500
+                        end: 599
+                  customResponseRef:
+                    name: "5xx"
+              upstream:
+                - responseConditions:
+                    statusCode:
+                      matcher:
+                        exact: 401
+                  customResponseRef:
+                    name: "401"
+                - responseConditions:
+                    statusCode:
+                      matcher:
+                        exact: 403
+                  customResponseRef:
+                    name: "403"
+                - responseConditions:
+                    statusCode:
+                      matcher:
+                        exact: 404
+                  customResponseRef:
+                    name: "404"
+                - responseConditions:
+                    statusCode:
+                      matcher:
+                        range:
+                          start: 400
+                          end: 499
+                  customResponseRef:
+                    name: "4xx"
+                - responseConditions:
+                    statusCode:
+                      matcher:
+                        exact: 502
+                  customResponseRef:
+                    name: "502"
+                - responseConditions:
+                    statusCode:
+                      matcher:
+                        range:
+                          start: 500
+                          end: 599
+                  customResponseRef:
+                    name: "5xx"
