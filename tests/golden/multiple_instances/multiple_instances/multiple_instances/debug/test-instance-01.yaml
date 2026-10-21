@@ -3,67 +3,83 @@ data:
   debug: |
     customResponses:
       "401":
-        content:
-        - body:
-            value: |
-              <!DOCTYPE html>
-              <html lang="de">
-              <head>
-                  <meta charset="utf-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                  <title>Customer Error 401</title>
-                  <style>
-                      @media (max-height: 550px) {
-                          body { overflow-y: auto; height: auto; }
-                      }
-                  </style>
-              </head>
-              <body>
-              <main>
-                  <h1><span class="textcode">Error </span>401</h1>
-                  <section>
-                    <h2 lang="de">Access Denied</h2>
-                    <p lang="de">You can't access this application.<br>
-                    Additional info: <a href="https://support.customer.com">Support</a>.</p>
-                  </section>
-              </main>
-              <footer>
-                  REQUEST ID: %STREAM_ID%
-              </footer>
-              </body>
-              </html>
-          contentType: "text/html"
-          headers: {}
+        customResponses:
+          text/html:
+            body:
+              value: |
+                <!DOCTYPE html>
+                <html lang="de">
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Customer Error 401</title>
+                    <style>
+                        @media (max-height: 550px) {
+                            body { overflow-y: auto; height: auto; }
+                        }
+                    </style>
+                </head>
+                <body>
+                <main>
+                    <h1><span class="textcode">Error </span>401</h1>
+                    <section>
+                      <h2 lang="de">Access Denied</h2>
+                      <p lang="de">You can't access this application.<br>
+                      Additional info: <a href="https://support.customer.com">Support</a>.</p>
+                    </section>
+                </main>
+                <footer>
+                    REQUEST ID: %STREAM_ID%
+                </footer>
+                </body>
+                </html>
+            headers: {}
+        matcher:
+          exact: 401
       "403":
-        content:
-        - body:
-            value: |
-              %RESPONSE_CODE%
-          contentType: "text/html"
+        customResponses:
+          text/html:
+            body:
+              value: |
+                %RESPONSE_CODE%
+        matcher:
+          exact: 403
       "404":
-        content:
-        - body:
-            value: |
-              %RESPONSE_CODE%
-          contentType: "text/html"
+        customResponses:
+          text/html:
+            body:
+              value: |
+                %RESPONSE_CODE%
+        matcher:
+          exact: 404
       4xx:
-        content:
-        - body:
-            value: |
-              %RESPONSE_CODE%
-          contentType: "text/html"
+        customResponses:
+          text/html:
+            body:
+              value: |
+                %RESPONSE_CODE%
+        matcher:
+          range:
+            from: 400
+            to: 499
       "502":
-        content:
-        - body:
-            value: |
-              %RESPONSE_CODE%
-          contentType: "text/html"
+        customResponses:
+          text/html:
+            body:
+              value: |
+                %RESPONSE_CODE%
+        matcher:
+          exact: 502
       5xx:
-        content:
-        - body:
-            value: |
-              %RESPONSE_CODE%
-          contentType: "text/html"
+        customResponses:
+          text/html:
+            body:
+              value: |
+                %RESPONSE_CODE%
+        matcher:
+          range:
+            from: 500
+            to: 599
     egressNetpol:
       spec:
         egress:
@@ -92,83 +108,7 @@ data:
     gatewayParameters:
       spec:
         defaults:
-          customResponses:
-            local:
-            - customResponseRef:
-                name: "401"
-              statusCodeCondition:
-                matcher:
-                  exact: 401
-            - customResponseRef:
-                name: "403"
-              statusCodeCondition:
-                matcher:
-                  exact: 403
-            - customResponseRef:
-                name: "404"
-              statusCodeCondition:
-                matcher:
-                  exact: 404
-            - customResponseRef:
-                name: "4xx"
-              statusCodeCondition:
-                matcher:
-                  range:
-                    from: 400
-                    to: 499
-            - customResponseRef:
-                name: "502"
-              statusCodeCondition:
-                matcher:
-                  exact: 502
-            - customResponseRef:
-                name: "5xx"
-              statusCodeCondition:
-                matcher:
-                  range:
-                    from: 500
-                    to: 599
-            upstream:
-            - customResponseRef:
-                name: "401"
-              responseConditions:
-                statusCode:
-                  matcher:
-                    exact: 401
-            - customResponseRef:
-                name: "403"
-              responseConditions:
-                statusCode:
-                  matcher:
-                    exact: 403
-            - customResponseRef:
-                name: "404"
-              responseConditions:
-                statusCode:
-                  matcher:
-                    exact: 404
-            - customResponseRef:
-                name: "4xx"
-              responseConditions:
-                statusCode:
-                  matcher:
-                    range:
-                      end: 499
-                      start: 400
-            - customResponseRef:
-                name: "502"
-              responseConditions:
-                statusCode:
-                  matcher:
-                    exact: 502
-            - customResponseRef:
-                name: "5xx"
-              responseConditions:
-                statusCode:
-                  matcher:
-                    range:
-                      end: 599
-                      start: 500
+          customResponses: {}
           downstream:
             remoteIP:
               proxyProtocol: {}

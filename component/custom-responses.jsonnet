@@ -3,6 +3,7 @@ local kap = import 'lib/kapitan.libjsonnet';
 
 local inv = kap.inventory();
 
+local cr = import 'lib/custom-responses.libsonnet';
 local params = inv.parameters.airlock_microgateway;
 
 local createCustomResponse(name, namespace, customResponseConfig) =
@@ -16,15 +17,8 @@ local createCustomResponse(name, namespace, customResponseConfig) =
 
 local mapCustomResponses = std.flatMap(
   function(instanceName)
-    local instanceValue = params.instances[instanceName];
-    local instanceCustomResponses = if std.objectHas(instanceValue, 'customResponses') then instanceValue.customResponses else {};
-    local patchedResponses = std.mergePatch(params.default.customResponses, instanceCustomResponses);
-    local toEntry = function(customResponseKeyValue) {
-      instance: instanceName,
-      responseName: customResponseKeyValue.key,
-      customResponse: customResponseKeyValue.value,
-    };
-    std.map(toEntry, std.objectKeysValues(patchedResponses)),
+    local specs = cr.specsFor(instanceName);
+    [ { instance: instanceName, responseName: name, customResponse: specs[name] } for name in std.objectFields(specs) ],
   std.objectFields(params.instances)
 );
 

@@ -65,13 +65,17 @@ default:
         externalNameServicesAllowed: true
 ----
 
-== `default.gatewayParameters.defaults.customResponses`
+== `customResponses`
 
-Allows to set the local and upstream customResponses, see
+Custom responses are configured as a single entry per response code under `customResponses` (either on `default` or per instance).
+If an entry contains a status-code `matcher`, the component automatically generates the `CustomResponse` resource and the corresponding entries in `gatewayParameters.spec.defaults.customResponses.local` and `.upstream` for every instance.
+There, `range` is emitted with `from`/`to` for local and with `start`/`end` for upstream references automatically. See
 https://docs.airlock.com/microgateway/5.0/index/api/crds/gateway-parameters/v1alpha1/index.html#gatewayparametersspecdefaultscustomresponses[Airlock Microgateway docs].
 
+The matcher is optional: an entry without `matcher` only creates the `CustomResponse` with the entry value used as its spec verbatim, and generates no references. This keeps hand-written `gatewayParameters.spec.defaults.customResponses` lists working as before.
+
 The first matching entry is used.
-It is not possible to override an existing range of the defaults in an instance because the additional customResponse configurations are appended because it is an array.
+The response name keys are ordered lexicographically, so name ranges so all entries sort in the desired matching order.
 
 For placeHolders see https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/substitution_formatter#config-advanced-substitution-operators[envoy substitution operators].
 
@@ -80,59 +84,27 @@ For placeHolders see https://www.envoyproxy.io/docs/envoy/latest/configuration/a
 [source,yaml]
 ----
 default:
-  gatewayParameters:
-    defaults:
-      customResponses:
-        local:
-          - statusCodeCondition:
-              matcher:
-                exact: 401
-            customResponseRef:
-              name: "401"
-          - statusCodeCondition:
-              matcher:
-                range:
-                  from: 400
-                  to: 499
-            customResponseRef:
-              name: "4xx"
   customResponses:
-        "401":
-          content:
-            - contentType: text/html
-              body:
-                value: |
-                  <!DOCTYPE html>
-                  <html lang="de">
-                  <head>
-                      <meta charset="utf-8">
-                      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                      <title>Customer Error 401</title>
-                      <style>
-                          @media (max-height: 550px) {
-                              body { overflow-y: auto; height: auto; }
-                          }
-                      </style>
-                  </head>
-                  <body>
-                  <main>
-                      <h1><span class="textcode">Error </span>401</h1>
-                      <section>
-                        <h2 lang="de">Access Denied</h2>
-                        <p lang="de">You can't access this application.<br>
-                        Additional info: <a href="https://support.customer.com">Support</a>.</p>
-                      </section>
-                  </main>
-                  <footer>
-                      REQUEST ID: %STREAM_ID%
-                  </footer>
-                  </body>
-                  </html>
-              headers: {}
-        "4xx":
-          content:
-            - contentType: text/html
-              body:
-                value: |
-                  %RESPONSE_CODE%
+    "401":
+      matcher:
+        exact: 401
+      customResponses:
+        text/html:
+          body:
+            value: |
+              <!DOCTYPE html>
+              <html lang="de">
+              <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <title>Customer Error 401</title>
+              </head>
+              <body>
+              <main>
+                  <h1><span class="textcode">Error </span>401</h1>
+                  <p lang="de">You can't access this application.</p>
+              </main>
+              </body>
+              </html>
+          headers: {}
 ----
