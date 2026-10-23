@@ -2,6 +2,7 @@
 local kube = import 'kube-ssa-compat.libsonnet';
 local gw = import 'lib/airlock-microgateway-operator.libsonnet';
 local com = import 'lib/commodore.libjsonnet';
+local customResponsesLib = import 'lib/custom-responses.libsonnet';
 local kap = import 'lib/kapitan.libjsonnet';
 
 local inv = kap.inventory();
@@ -170,7 +171,7 @@ local derivedRefs(field, name) =
         sessionHandlingRef: {
           name: resourceName('sessionHandling', name),
         },
-      },
+      } + customResponsesLib.gatewayParametersCustomResponses(name),
     },
   } else if field == 'sessionHandling' then {
     spec: {
