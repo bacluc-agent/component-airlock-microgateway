@@ -67,12 +67,21 @@ default:
 
 == `customResponses`
 
-Custom responses are configured as a single entry per response code under `customResponses` (either on `default` or per instance).
-If an entry contains a status-code `matcher`, the component automatically generates the `CustomResponse` resource and the corresponding entries in `gatewayParameters.spec.defaults.customResponses.local` and `.upstream` for every instance.
+Custom responses are configured as entries under `customResponses`, either on `default` or per instance.
+The keys are response names, usually status codes.
+
+The *recommended* shape combines a status-code `matcher` with a `customResponses` map keyed by content type.
+For such an entry, the component generates the `CustomResponse` resource.
+Each key in the nested `customResponses` map becomes one `spec.content` item in the form `{contentType: <key>} + <value>`, and the `matcher` is not copied into the generated `CustomResponse`.
+When the entry is set on `default`, the component also generates the corresponding entries in `gatewayParameters.spec.defaults.customResponses.local` and `.upstream` for every instance that inherits it; an entry set on an instance only generates them for that instance.
 There, `range` is emitted with `from`/`to` for local and with `start`/`end` for upstream references automatically. See
 https://docs.airlock.com/microgateway/5.0/index/api/crds/gateway-parameters/v1alpha1/index.html#gatewayparametersspecdefaultscustomresponses[Airlock Microgateway docs].
 
-The matcher is optional: an entry without `matcher` only creates the `CustomResponse` with the entry value used as its spec verbatim, and generates no references. This keeps hand-written `gatewayParameters.spec.defaults.customResponses` lists working as before.
+The matcher is optional: an entry without `matcher` still creates its `CustomResponse` but generates no references.
+A legacy entry without a `customResponses` map is treated as a `CustomResponse` spec.
+Hand-written `gatewayParameters.spec.defaults.customResponses` lists on `default` keep working as long as no entry has a matcher.
+Once an entry with a matcher exists for an instance, the generated lists replace these arrays for that instance through JSON merge patch.
+Instance-level `gatewayParameters` still overrides the generated values by merge order.
 
 The first matching entry is used.
 The response name keys are ordered lexicographically, so name ranges so all entries sort in the desired matching order.

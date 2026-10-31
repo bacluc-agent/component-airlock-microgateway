@@ -67,14 +67,19 @@ local specFor(entry) =
     ],
   } else entry;
 
-// The CustomResponse spec source for an entry: a legacy entry set on the
-// instance wins verbatim, a new-shape instance entry extends the default
-// content map, otherwise the default entry decides.
+// The CustomResponse spec source for an entry: a legacy instance entry
+// replaces a new-shape default verbatim, while legacy defaults and new-shape
+// instance entries merge per JSON merge patch.
 local specEntry(instanceName, key) =
   local instanceValues = instanceCustomResponses(instanceName);
-  if std.objectHas(instanceValues, key) && instanceValues[key] != null && std.objectHas(instanceValues[key], 'customResponses') then mergedEntries(instanceName)[key]
-  else if std.objectHas(instanceValues, key) && instanceValues[key] != null then instanceValues[key]
-  else defaultCustomResponses[key];
+  local instanceEntry = if std.objectHas(instanceValues, key) then instanceValues[key] else null;
+  local defaultEntry = if std.objectHas(defaultCustomResponses, key) then defaultCustomResponses[key] else {};
+  if instanceEntry != null
+     && !std.objectHas(instanceEntry, 'customResponses')
+     && defaultEntry != null
+     && (std.objectHas(defaultEntry, 'matcher') || std.objectHas(defaultEntry, 'customResponses'))
+  then instanceEntry
+  else mergedEntries(instanceName)[key];
 
 local localRefs(instanceName) = [
   {
