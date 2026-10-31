@@ -15,7 +15,7 @@ parameters:
         output_path: vendor/lib/prom.libsonnet
       - type: https
         source: https://raw.githubusercontent.com/appuio/component-openshift4-monitoring/master/lib/openshift4-monitoring-alert-patching.libsonnet
-        output_path: vendor/lib/openshift4-monitoring-alert-patching.libsonnet
+        output_path: vendor/lib/alert-patching.libsonnet
       - type: https
         source: https://raw.githubusercontent.com/projectsyn/jsonnet-libs/main/alerts.libsonnet
         output_path: vendor/lib/syn/alerts.libsonnet

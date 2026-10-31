@@ -19,83 +19,7 @@ parameters:
       gatewayParameters:
         spec:
           defaults:
-            customResponses:
-              local:
-                - statusCodeCondition:
-                    matcher:
-                      exact: 401
-                  customResponseRef:
-                    name: "401"
-                - statusCodeCondition:
-                    matcher:
-                      exact: 403
-                  customResponseRef:
-                    name: "403"
-                - statusCodeCondition:
-                    matcher:
-                      exact: 404
-                  customResponseRef:
-                    name: "404"
-                - statusCodeCondition:
-                    matcher:
-                      range:
-                        from: 400
-                        to: 499
-                  customResponseRef:
-                    name: "4xx"
-                - statusCodeCondition:
-                    matcher:
-                      exact: 502
-                  customResponseRef:
-                    name: "502"
-                - statusCodeCondition:
-                    matcher:
-                      range:
-                        from: 500
-                        to: 599
-                  customResponseRef:
-                    name: "5xx"
-              upstream:
-                - responseConditions:
-                    statusCode:
-                      matcher:
-                        exact: 401
-                  customResponseRef:
-                    name: "401"
-                - responseConditions:
-                    statusCode:
-                      matcher:
-                        exact: 403
-                  customResponseRef:
-                    name: "403"
-                - responseConditions:
-                    statusCode:
-                      matcher:
-                        exact: 404
-                  customResponseRef:
-                    name: "404"
-                - responseConditions:
-                    statusCode:
-                      matcher:
-                        range:
-                          start: 400
-                          end: 499
-                  customResponseRef:
-                    name: "4xx"
-                - responseConditions:
-                    statusCode:
-                      matcher:
-                        exact: 502
-                  customResponseRef:
-                    name: "502"
-                - responseConditions:
-                    statusCode:
-                      matcher:
-                        range:
-                          start: 500
-                          end: 599
-                  customResponseRef:
-                    name: "5xx"
+            customResponses: {}
       namespace:
         labels:
           appuio.ch/waf: airlock
@@ -203,8 +127,10 @@ parameters:
                     statusCode: 301
       customResponses:
         "401":
-          content:
-            - contentType: text/html
+          matcher:
+            exact: 401
+          customResponses:
+            text/html:
               body:
                 value: |
                   <!DOCTYPE html>
@@ -235,32 +161,46 @@ parameters:
                   </html>
               headers: {}
         "403":
-          content:
-            - contentType: text/html
+          matcher:
+            exact: 403
+          customResponses:
+            text/html:
               body:
                 value: |
                   %RESPONSE_CODE%
         "404":
-          content:
-            - contentType: text/html
+          matcher:
+            exact: 404
+          customResponses:
+            text/html:
               body:
                 value: |
                   %RESPONSE_CODE%
         "4xx":
-          content:
-            - contentType: text/html
+          matcher:
+            range:
+              from: 400
+              to: 499
+          customResponses:
+            text/html:
               body:
                 value: |
                   %RESPONSE_CODE%
         "502":
-          content:
-            - contentType: text/html
+          matcher:
+            exact: 502
+          customResponses:
+            text/html:
               body:
                 value: |
                   %RESPONSE_CODE%
         "5xx":
-          content:
-            - contentType: text/html
+          matcher:
+            range:
+              from: 500
+              to: 599
+          customResponses:
+            text/html:
               body:
                 value: |
                   %RESPONSE_CODE%
@@ -342,16 +282,6 @@ parameters:
                     node-role.kubernetes.io/test: ""
       test-instance-02: {}
       test-instance-overriding-customResponses:
-        gatewayParamters:
-          spec:
-            defaults:
-              customResponses:
-                local:
-                  - statusCodeCondition:
-                      matcher:
-                        exact: 301
-                    customResponseRef:
-                      name: "301"
         customResponses:
           "403":
             content:
@@ -364,8 +294,10 @@ parameters:
                   value: |
                     {"json": "is also possible"}
           "301":
-            content:
-              - contentType: text/html
+            matcher:
+              exact: 301
+            customResponses:
+              text/html:
                 body:
                   value: |
                     Redirect
