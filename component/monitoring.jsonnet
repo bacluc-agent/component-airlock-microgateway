@@ -97,7 +97,44 @@ local backendConfigMap = kube.ConfigMap('nginx-conf') {
       else
         httpConfig,
 };
-local backendDeployment = kube.Deployment('microgateway-canary-backend') {
+local backendContainer = std.mergePatch(
+  {
+    name: 'nginx',
+    image: backendImage.registry + '/' + backendImage.repository + ':' + backendImage.tag,
+    resources: params.dummyBackend.resources,
+    ports: [
+      {
+        name: 'http',
+        containerPort: 8080,
+      },
+    ] + if params.dummyBackend.tls.enabled then [
+      {
+        name: 'https',
+        containerPort: 8443,
+      },
+    ] else [],
+    livenessProbe: {
+      httpGet: {
+        port: 'http',
+        path: '/health',
+      },
+    },
+    volumeMounts: [ {
+      mountPath: '/etc/nginx/conf.d/default.conf',
+      name: 'nginx-conf',
+      subPath: 'default.conf',
+    } ] + if params.dummyBackend.tls.enabled then [
+      {
+        mountPath: '/etc/nginx/tls',
+        name: 'nginx-tls',
+        readOnly: true,
+      },
+    ] else [],
+  },
+  params.dummyBackend.containers.nginx
+);
+
+local backendDeploymentBase = kube.Deployment('microgateway-canary-backend') {
   metadata+: {
     namespace: nsName,
     labels: {
@@ -107,41 +144,8 @@ local backendDeployment = kube.Deployment('microgateway-canary-backend') {
   spec+: {
     template+: {
       spec+: {
-        containers: [
-          {
-            name: 'nginx',
-            image: backendImage.registry + '/' + backendImage.repository + ':' + backendImage.tag,
-            resources: params.dummyBackend.resources,
-            ports: [
-              {
-                name: 'http',
-                containerPort: 8080,
-              },
-            ] + if params.dummyBackend.tls.enabled then [
-              {
-                name: 'https',
-                containerPort: 8443,
-              },
-            ] else [],
-            livenessProbe: {
-              httpGet: {
-                port: 'http',
-                path: '/health',
-              },
-            },
-            volumeMounts: [ {
-              mountPath: '/etc/nginx/conf.d/default.conf',
-              name: 'nginx-conf',
-              subPath: 'default.conf',
-            } ] + if params.dummyBackend.tls.enabled then [
-              {
-                mountPath: '/etc/nginx/tls',
-                name: 'nginx-tls',
-                readOnly: true,
-              },
-            ] else [],
-          },
-        ],
+        nodeSelector: params.dummyBackend.nodeSelector,
+        containers: [ backendContainer ],
         volumes+: [ {
           name: 'nginx-conf',
           configMap: {
@@ -159,6 +163,10 @@ local backendDeployment = kube.Deployment('microgateway-canary-backend') {
     },
   },
 };
+local backendDeployment = std.mergePatch(
+  backendDeploymentBase,
+  params.dummyBackend.deployment
+);
 local backendService = kube.Service('microgateway-canary-backend-svc') {
   target_pod:: backendDeployment.spec.template,
   target_container_name:: 'nginx',

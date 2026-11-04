@@ -28,6 +28,12 @@ parameters:
         enabled: false
       dummyBackend:
         enabled: false
+        nodeSelector: {}
+        containers:
+          nginx: {}
+        deployment:
+          metadata: {}
+          spec: {}
         tls:
           enabled: false
     operatorNamespace: ""
