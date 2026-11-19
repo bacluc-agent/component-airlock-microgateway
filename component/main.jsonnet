@@ -16,7 +16,7 @@ local metadataNamespace(name) = {
   },
 };
 
-local has(obj, field) = std.objectHas(obj, field) && obj[field] != null;
+local has(obj, field) = obj != null && std.objectHas(obj, field) && obj[field] != null;
 
 // main template for airlock-microgateway
 local httpRoute(name='') = {

@@ -345,7 +345,7 @@ parameters:
         gateway:
           metadata:
             name: custom-gateway
-        gatewayParamters:
+        gatewayParameters:
           spec:
             defaults:
               customResponses:

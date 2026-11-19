@@ -17,7 +17,7 @@ local createCustomResponse(name, namespace, customResponseConfig) =
 local mapCustomResponses = std.flatMap(
   function(instanceName)
     local instanceValue = params.instances[instanceName];
-    local instanceCustomResponses = if std.objectHas(instanceValue, 'customResponses') then instanceValue.customResponses else {};
+    local instanceCustomResponses = if instanceValue != null && std.objectHas(instanceValue, 'customResponses') then instanceValue.customResponses else {};
     local patchedResponses = std.mergePatch(params.default.customResponses, instanceCustomResponses);
     local toEntry = function(customResponseKeyValue) {
       instance: instanceName,
