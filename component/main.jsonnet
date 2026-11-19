@@ -3,7 +3,6 @@ local kube = import 'kube-ssa-compat.libsonnet';
 local gw = import 'lib/airlock-microgateway-operator.libsonnet';
 local com = import 'lib/commodore.libjsonnet';
 local kap = import 'lib/kapitan.libjsonnet';
-local prometheus = import 'lib/prometheus.libsonnet';
 
 local inv = kap.inventory();
 
@@ -17,24 +16,9 @@ local metadataNamespace(name) = {
   },
 };
 
-local has(obj, field) = std.objectHas(obj, field) && obj[field] != null;
+local has(obj, field) = obj != null && std.objectHas(obj, field) && obj[field] != null;
 
 // main template for airlock-microgateway
-local extractInstances(field) = {
-  [name]:
-    if has(params.default, field)
-    then std.mergePatch(params.default[field], metadataNamespace(name))
-    else metadataNamespace(name)
-  for name in std.objectFields(params.instances)
-};
-
-local patchObjects(key, objs) = [
-  if has(params.instances[obj.metadata.namespace], key)
-  then std.mergePatch(obj, params.instances[obj.metadata.namespace][key])
-  else obj
-  for obj in objs
-];
-
 local httpRoute(name='') = {
   apiVersion: 'gateway.networking.k8s.io/v1',
   kind: 'HTTPRoute',
@@ -78,7 +62,21 @@ local namespaces = {
     },
   }
   for instance in std.objectKeysValues(params.instances)
+  if instance.value != null
 };
+
+// The final name of a resource, derived from the instance name unless the
+// user overrides metadata.name in the instance parameters.
+local resourceName(field, name) =
+  if has(params.instances[name], field)
+     && has(params.instances[name][field], 'metadata')
+     && has(params.instances[name][field].metadata, 'name')
+  then params.instances[name][field].metadata.name
+  else if has(params.default, field)
+          && has(params.default[field], 'metadata')
+          && has(params.default[field].metadata, 'name')
+  then params.default[field].metadata.name
+  else kube.hyphenate(name);
 
 local CiliumNetworkPolicy(name) = {
   apiVersion: 'cilium.io/v2',
@@ -88,16 +86,16 @@ local CiliumNetworkPolicy(name) = {
   },
 };
 
-local GatewayCNPEgress(name) =
-  CiliumNetworkPolicy(name) {
+local GatewayCNPEgress(namespace, gatewayName) =
+  CiliumNetworkPolicy(namespace) {
     metadata: {
       name: 'internal-dns-egress',
-      namespace: name,
+      namespace: namespace,
     },
     spec: {
       endpointSelector: {
         matchLabels: {
-          'gateway.networking.k8s.io/gateway-name': name,
+          'gateway.networking.k8s.io/gateway-name': gatewayName,
           'microgateway.airlock.com/managedBy': params.operatorNamespace,
         },
       },
@@ -133,16 +131,16 @@ local GatewayCNPEgress(name) =
     },
   };
 
-local GatewayCNPIngress(name) =
-  CiliumNetworkPolicy(name) {
+local GatewayCNPIngress(namespace, gatewayName) =
+  CiliumNetworkPolicy(namespace) {
     metadata: {
       name: 'allow-ingress-world',
-      namespace: name,
+      namespace: namespace,
     },
     spec: {
       endpointSelector: {
         matchLabels: {
-          'gateway.networking.k8s.io/gateway-name': name,
+          'gateway.networking.k8s.io/gateway-name': gatewayName,
           'microgateway.airlock.com/managedBy': params.operatorNamespace,
         },
       },
@@ -154,47 +152,146 @@ local GatewayCNPIngress(name) =
     },
   };
 
-local gateway_cnps = [
-  cnp
-  for instance in std.objectKeysValues(params.instances)
-  if has_cilium
-  for cnp in [
-    GatewayCNPIngress(instance.key),
-    GatewayCNPEgress(instance.key),
-  ]
-];
-
 local toFiles(objects) = {
   ['%s/%s-%s' % [ object.metadata.namespace, object.kind, object.metadata.name ]]: object
   for object in objects
 };
 
-local prometheusRule(name) = {
-  apiVersion: 'monitoring.coreos.com/v1',
-  kind: 'PrometheusRule',
-  metadata: {
-    name: 'session-storage-rules',
-    namespace: name,
-  },
-  spec: params.sessionMonitoring.prometheusRuleSpec,
-};
+// Fill in the derived Gateway name for each parentRef that doesn't set one.
+local withGatewayRefs(route, gatewayName) =
+  if has(route, 'spec') && has(route.spec, 'parentRefs') then
+    route {
+      spec+: {
+        parentRefs: [
+          ref + (if has(ref, 'name') then {} else { name: gatewayName })
+          for ref in route.spec.parentRefs
+        ],
+      },
+    }
+  else
+    route;
 
-local sessionStoreRules = {
-  ['%s/SessionMonitoring' % instance.key]: prometheusRule(instance.key)
-  for instance in std.objectKeysValues(params.instances)
-};
-
+// Merge order (last wins): generator, default+namespace, derived values, instance params.
+// All per-instance resources, generated in an instance-outer loop
+local instanceResources = std.flatMap(
+  function(instance)
+    local name = instance.key;
+    local gatewayName = resourceName('gateway', name);
+    [
+      std.mergePatch(
+        std.mergePatch(
+          gw.Gateway(kube.hyphenate(name)) + com.makeMergeable(
+            if has(params.default, 'gateway')
+            then std.mergePatch(params.default.gateway, metadataNamespace(name))
+            else metadataNamespace(name)
+          ),
+          {
+            spec: {
+              infrastructure: {
+                parametersRef: {
+                  group: 'microgateway.airlock.com',
+                  kind: 'GatewayParameters',
+                  name: resourceName('gatewayParameters', name),
+                },
+              },
+            },
+          }
+        ),
+        if has(params.instances[name], 'gateway') then params.instances[name].gateway else {}
+      ),
+      std.mergePatch(
+        std.mergePatch(
+          gw.GatewayParameters(kube.hyphenate(name)) + com.makeMergeable(
+            if has(params.default, 'gatewayParameters')
+            then std.mergePatch(params.default.gatewayParameters, metadataNamespace(name))
+            else metadataNamespace(name)
+          ),
+          {
+            spec: {
+              defaults: {
+                sessionHandlingRef: {
+                  name: resourceName('sessionHandling', name),
+                },
+              },
+            },
+          }
+        ),
+        if has(params.instances[name], 'gatewayParameters') then params.instances[name].gatewayParameters else {}
+      ),
+      withGatewayRefs(
+        std.mergePatch(
+          httpRoute(kube.hyphenate(name)) + com.makeMergeable(
+            if has(params.default, 'httpRedirect')
+            then std.mergePatch(params.default.httpRedirect, metadataNamespace(name))
+            else metadataNamespace(name)
+          ),
+          if has(params.instances[name], 'httpRedirect') then params.instances[name].httpRedirect else {}
+        ),
+        gatewayName
+      ),
+      std.mergePatch(
+        pdb(kube.hyphenate(name)) + com.makeMergeable(
+          if has(params.default, 'pdb')
+          then std.mergePatch(params.default.pdb, metadataNamespace(name))
+          else metadataNamespace(name)
+        ),
+        if has(params.instances[name], 'pdb') then params.instances[name].pdb else {}
+      ),
+      std.mergePatch(
+        std.mergePatch(
+          egressNetpol(kube.hyphenate(name)) + com.makeMergeable(
+            if has(params.default, 'egressNetpol')
+            then std.mergePatch(params.default.egressNetpol, metadataNamespace(name))
+            else metadataNamespace(name)
+          ),
+          {
+            spec: {
+              podSelector: {
+                matchLabels: {
+                  'gateway.networking.k8s.io/gateway-name': gatewayName,
+                },
+              },
+            },
+          }
+        ),
+        if has(params.instances[name], 'egressNetpol') then params.instances[name].egressNetpol else {}
+      ),
+      std.mergePatch(
+        std.mergePatch(
+          gw.SessionHandling(kube.hyphenate(name)) + com.makeMergeable(
+            if has(params.default, 'sessionHandling')
+            then std.mergePatch(params.default.sessionHandling, metadataNamespace(name))
+            else metadataNamespace(name)
+          ),
+          {
+            spec: {
+              persistence: {
+                redisProviderRef: {
+                  name: resourceName('redisProvider', name),
+                },
+              },
+            },
+          }
+        ),
+        if has(params.instances[name], 'sessionHandling') then params.instances[name].sessionHandling else {}
+      ),
+      std.mergePatch(
+        gw.RedisProvider(kube.hyphenate(name)) + com.makeMergeable(
+          if has(params.default, 'redisProvider')
+          then std.mergePatch(params.default.redisProvider, metadataNamespace(name))
+          else metadataNamespace(name)
+        ),
+        if has(params.instances[name], 'redisProvider') then params.instances[name].redisProvider else {}
+      ),
+    ] + if has_cilium then [
+      GatewayCNPIngress(name, gatewayName),
+      GatewayCNPEgress(name, gatewayName),
+    ] else [],
+  std.filter(function(instance) instance.value != null, std.objectKeysValues(params.instances))
+);
 
 // Define outputs below
-toFiles(patchObjects('gateway', com.generateResources(extractInstances('gateway'), gw.Gateway))) +
-toFiles(patchObjects('gatewayParameters', com.generateResources(extractInstances('gatewayParameters'), gw.GatewayParameters))) +
-toFiles(patchObjects('httpRedirect', com.generateResources(extractInstances('httpRedirect'), httpRoute))) +
-toFiles(patchObjects('pdb', com.generateResources(extractInstances('pdb'), pdb))) +
-toFiles(patchObjects('egressNetpol', com.generateResources(extractInstances('egressNetpol'), egressNetpol))) +
-toFiles(patchObjects('sessionHandling', com.generateResources(extractInstances('sessionHandling'), gw.SessionHandling))) +
-toFiles(patchObjects('redisProvider', com.generateResources(extractInstances('redisProvider'), gw.RedisProvider))) +
-toFiles(gateway_cnps) +
+toFiles(instanceResources) +
 namespaces
-+ (import 'monitoring.jsonnet')
 + (import 'custom-responses.jsonnet')
 + (import 'lib/debug.jsonnet')

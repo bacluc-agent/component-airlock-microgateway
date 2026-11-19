@@ -1,9 +1,9 @@
 apiVersion: microgateway.airlock.com/v1alpha1
-kind: SessionHandling
+kind: RedisProvider
 metadata:
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-  name: test-instance-overriding-customResponses
+  name: custom-redis-provider
   namespace: test-instance-overriding-customResponses
 spec:
   auth:

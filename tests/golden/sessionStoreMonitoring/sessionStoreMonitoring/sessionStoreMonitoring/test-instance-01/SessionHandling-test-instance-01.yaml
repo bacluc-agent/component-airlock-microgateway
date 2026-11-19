@@ -5,3 +5,7 @@ metadata:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
   name: test-instance-01
   namespace: test-instance-01
+spec:
+  persistence:
+    redisProviderRef:
+      name: test-instance-01

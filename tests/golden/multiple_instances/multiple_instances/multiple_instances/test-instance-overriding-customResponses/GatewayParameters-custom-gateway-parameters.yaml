@@ -3,46 +3,17 @@ kind: GatewayParameters
 metadata:
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-  name: test-instance-overriding-customResponses
+  name: custom-gateway-parameters
   namespace: test-instance-overriding-customResponses
 spec:
   defaults:
     customResponses:
       local:
         - customResponseRef:
-            name: '401'
+            name: '301'
           statusCodeCondition:
             matcher:
-              exact: 401
-        - customResponseRef:
-            name: '403'
-          statusCodeCondition:
-            matcher:
-              exact: 403
-        - customResponseRef:
-            name: '404'
-          statusCodeCondition:
-            matcher:
-              exact: 404
-        - customResponseRef:
-            name: 4xx
-          statusCodeCondition:
-            matcher:
-              range:
-                end: 499
-                start: 400
-        - customResponseRef:
-            name: '502'
-          statusCodeCondition:
-            matcher:
-              exact: 502
-        - customResponseRef:
-            name: 5xx
-          statusCodeCondition:
-            matcher:
-              range:
-                end: 599
-                start: 500
+              exact: 301
       upstream:
         - customResponseRef:
             name: '401'
@@ -88,7 +59,7 @@ spec:
       remoteIP:
         proxyProtocol: {}
     sessionHandlingRef:
-      name: redis-session
+      name: custom-session-handling
   features:
     envoyExtensionPolicyEnabled: true
     insecureTLSAllowed: true

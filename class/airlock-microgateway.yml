@@ -1,5 +1,9 @@
 parameters:
   kapitan:
+    dependencies:
+      - type: https
+        source: https://raw.githubusercontent.com/appuio/component-airlock-microgateway-operator/master/lib/airlock-microgateway-operator.libsonnet
+        output_path: vendor/lib/airlock-microgateway-operator.libsonnet
     compile:
       - input_paths:
           - ${_base_directory}/component/app.jsonnet
@@ -7,5 +11,9 @@ parameters:
         output_path: .
       - input_paths:
           - ${_base_directory}/component/main.jsonnet
+        input_type: jsonnet
+        output_path: ${_instance}
+      - input_paths:
+          - ${_base_directory}/component/monitoring.jsonnet
         input_type: jsonnet
         output_path: ${_instance}

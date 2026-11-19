@@ -22,6 +22,6 @@ spec:
   podSelector:
     matchLabels:
       gateway.networking.k8s.io/gateway-class-name: microgateway-cloudscale
-      gateway.networking.k8s.io/gateway-name: vshn-default-test-01
+      gateway.networking.k8s.io/gateway-name: vshn-test-default-02
   policyTypes:
     - Egress
