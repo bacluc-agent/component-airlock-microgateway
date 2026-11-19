@@ -90,6 +90,8 @@ data:
         policyTypes:
         - "Egress"
     gateway:
+      metadata:
+        name: "custom-gateway"
       spec:
         gatewayClassName: "test-default"
         listeners:
