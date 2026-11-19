@@ -25,7 +25,7 @@ local mapCustomResponses = std.flatMap(
       customResponse: customResponseKeyValue.value,
     };
     std.map(toEntry, std.objectKeysValues(patchedResponses)),
-  [ instanceName for instanceName in std.objectFields(params.instances) if params.instances[instanceName] != null ]
+  std.filter(function(instanceName) params.instances[instanceName] != null, std.objectFields(params.instances))
 );
 
 {
