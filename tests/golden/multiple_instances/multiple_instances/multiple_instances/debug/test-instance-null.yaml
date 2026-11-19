@@ -120,8 +120,8 @@ data:
               statusCodeCondition:
                 matcher:
                   range:
-                    from: 400
-                    to: 499
+                    end: 499
+                    start: 400
             - customResponseRef:
                 name: "502"
               statusCodeCondition:
@@ -132,8 +132,8 @@ data:
               statusCodeCondition:
                 matcher:
                   range:
-                    from: 500
-                    to: 599
+                    end: 599
+                    start: 500
             upstream:
             - customResponseRef:
                 name: "401"
