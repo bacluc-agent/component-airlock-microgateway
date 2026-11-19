@@ -156,46 +156,6 @@ local toFiles(objects) = {
   for object in objects
 };
 
-// Cross-references derived from the instance name, injected between the
-// default and instance parameters so explicit user overrides still win.
-local derivedRefs(field, name) =
-  local gatewayName = resourceName('gateway', name);
-  if field == 'gateway' then {
-    spec: {
-      infrastructure: {
-        parametersRef: {
-          group: 'microgateway.airlock.com',
-          kind: 'GatewayParameters',
-          name: resourceName('gatewayParameters', name),
-        },
-      },
-    },
-  } else if field == 'gatewayParameters' then {
-    spec: {
-      defaults: {
-        sessionHandlingRef: {
-          name: resourceName('sessionHandling', name),
-        },
-      },
-    },
-  } else if field == 'sessionHandling' then {
-    spec: {
-      persistence: {
-        redisProviderRef: {
-          name: resourceName('redisProvider', name),
-        },
-      },
-    },
-  } else if field == 'egressNetpol' then {
-    spec: {
-      podSelector: {
-        matchLabels: {
-          'gateway.networking.k8s.io/gateway-name': gatewayName,
-        },
-      },
-    },
-  } else {};
-
 // Fill in the derived Gateway name for each parentRef that doesn't set one.
 local withGatewayRefs(route, gatewayName) =
   if has(route, 'spec') && has(route.spec, 'parentRefs') then
@@ -211,9 +171,9 @@ local withGatewayRefs(route, gatewayName) =
     route;
 
 // Generate a single resource of the given type for one instance.
-// The generator output is merged with the default parameters, the derived
-// cross-references and the instance-specific parameters, in that order.
-local resource(field, generator, name) =
+// Merges generator output, default parameters plus namespace, the explicit
+// derived refs object, then instance parameters, in that order.
+local buildResource(name, field, generator, derived={}) =
   std.mergePatch(
     std.mergePatch(
       generator(kube.hyphenate(name)) + com.makeMergeable(
@@ -221,25 +181,57 @@ local resource(field, generator, name) =
         then std.mergePatch(params.default[field], metadataNamespace(name))
         else metadataNamespace(name)
       ),
-      derivedRefs(field, name)
+      derived
     ),
     if has(params.instances[name], field) then params.instances[name][field] else {}
   );
 
-// Instance-independent resources
-local monitoringResources = import 'monitoring.jsonnet';
+local gateway(name) = buildResource(name, 'gateway', gw.Gateway, {
+  spec: { infrastructure: { parametersRef: {
+    group: 'microgateway.airlock.com',
+    kind: 'GatewayParameters',
+    name: resourceName('gatewayParameters', name),
+  } } },
+});
+
+local gatewayParameters(name) = buildResource(name, 'gatewayParameters', gw.GatewayParameters, {
+  spec: { defaults: { sessionHandlingRef: {
+    name: resourceName('sessionHandling', name),
+  } } },
+});
+
+local httpRedirect(name) = withGatewayRefs(
+  buildResource(name, 'httpRedirect', httpRoute),
+  resourceName('gateway', name)
+);
+
+local pdbResource(name) = buildResource(name, 'pdb', pdb);
+
+local egressNetpolResource(name) = buildResource(name, 'egressNetpol', egressNetpol, {
+  spec: { podSelector: { matchLabels: {
+    'gateway.networking.k8s.io/gateway-name': resourceName('gateway', name),
+  } } },
+});
+
+local sessionHandling(name) = buildResource(name, 'sessionHandling', gw.SessionHandling, {
+  spec: { persistence: { redisProviderRef: {
+    name: resourceName('redisProvider', name),
+  } } },
+});
+
+local redisProvider(name) = buildResource(name, 'redisProvider', gw.RedisProvider);
 
 // All per-instance resources, generated in an instance-outer loop
 local instanceResources = std.flatMap(
   function(instance)
     [
-      resource('gateway', gw.Gateway, instance.key),
-      resource('gatewayParameters', gw.GatewayParameters, instance.key),
-      withGatewayRefs(resource('httpRedirect', httpRoute, instance.key), resourceName('gateway', instance.key)),
-      resource('pdb', pdb, instance.key),
-      resource('egressNetpol', egressNetpol, instance.key),
-      resource('sessionHandling', gw.SessionHandling, instance.key),
-      resource('redisProvider', gw.RedisProvider, instance.key),
+      gateway(instance.key),
+      gatewayParameters(instance.key),
+      httpRedirect(instance.key),
+      pdbResource(instance.key),
+      egressNetpolResource(instance.key),
+      sessionHandling(instance.key),
+      redisProvider(instance.key),
     ] + if has_cilium then [
       GatewayCNPIngress(instance.key, resourceName('gateway', instance.key)),
       GatewayCNPEgress(instance.key, resourceName('gateway', instance.key)),
@@ -250,6 +242,7 @@ local instanceResources = std.flatMap(
 // Define outputs below
 toFiles(instanceResources) +
 namespaces
-+ monitoringResources
+// monitoring.jsonnet emits its own manifests and is instance-independent (singleton).
++ (import 'monitoring.jsonnet')
 + (import 'custom-responses.jsonnet')
 + (import 'lib/debug.jsonnet')
