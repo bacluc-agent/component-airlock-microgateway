@@ -9,8 +9,6 @@ spec:
   gatewayClassName: test-instances-01
   infrastructure:
     parametersRef:
-      group: microgateway.airlock.com
-      kind: GatewayParameters
       name: test-instance-01
   listeners:
     - allowedRoutes:

@@ -3,7 +3,7 @@ kind: GatewayParameters
 metadata:
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-  name: shared-gateway-parameters
+  name: vshn-default-test-01
   namespace: vshn-default-test-01
 spec:
   defaults:
