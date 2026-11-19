@@ -86,7 +86,7 @@ local CiliumNetworkPolicy(name) = {
 };
 
 local GatewayCNPEgress(namespace, gatewayName) =
-  CiliumNetworkPolicy(gatewayName) {
+  CiliumNetworkPolicy(namespace) {
     metadata: {
       name: 'internal-dns-egress',
       namespace: namespace,
@@ -131,7 +131,7 @@ local GatewayCNPEgress(namespace, gatewayName) =
   };
 
 local GatewayCNPIngress(namespace, gatewayName) =
-  CiliumNetworkPolicy(gatewayName) {
+  CiliumNetworkPolicy(namespace) {
     metadata: {
       name: 'allow-ingress-world',
       namespace: namespace,
