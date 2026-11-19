@@ -170,67 +170,126 @@ local withGatewayRefs(route, gatewayName) =
   else
     route;
 
-// Merge order (last wins): generator, default+namespace, derived refs, instance params.
-local resource(field, generator, name, derived={}) =
-  std.mergePatch(
-    std.mergePatch(
-      generator(kube.hyphenate(name)) + com.makeMergeable(
-        if has(params.default, field)
-        then std.mergePatch(params.default[field], metadataNamespace(name))
-        else metadataNamespace(name)
-      ),
-      derived
-    ),
-    if has(params.instances[name], field) then params.instances[name][field] else {}
-  );
-
 // All per-instance resources, generated in an instance-outer loop
 local instanceResources = std.flatMap(
   function(instance)
     local name = instance.key;
     local gatewayName = resourceName('gateway', name);
     [
-      resource('gateway', gw.Gateway, name, {
-        spec: {
-          infrastructure: {
-            parametersRef: {
-              group: 'microgateway.airlock.com',
-              kind: 'GatewayParameters',
-              name: resourceName('gatewayParameters', name),
+      std.mergePatch(
+        std.mergePatch(
+          gw.Gateway(kube.hyphenate(name)) + com.makeMergeable(
+            if has(params.default, 'gateway')
+            then std.mergePatch(params.default.gateway, metadataNamespace(name))
+            else metadataNamespace(name)
+          ),
+          {
+            spec: {
+              infrastructure: {
+                parametersRef: {
+                  group: 'microgateway.airlock.com',
+                  kind: 'GatewayParameters',
+                  name: resourceName('gatewayParameters', name),
+                },
+              },
             },
-          },
-        },
-      }),
-      resource('gatewayParameters', gw.GatewayParameters, name, {
-        spec: {
-          defaults: {
-            sessionHandlingRef: {
-              name: resourceName('sessionHandling', name),
+          }
+        ),
+        if has(params.instances[name], 'gateway') then params.instances[name].gateway else {}
+      ),
+      std.mergePatch(
+        std.mergePatch(
+          gw.GatewayParameters(kube.hyphenate(name)) + com.makeMergeable(
+            if has(params.default, 'gatewayParameters')
+            then std.mergePatch(params.default.gatewayParameters, metadataNamespace(name))
+            else metadataNamespace(name)
+          ),
+          {
+            spec: {
+              defaults: {
+                sessionHandlingRef: {
+                  name: resourceName('sessionHandling', name),
+                },
+              },
             },
-          },
-        },
-      }),
-      withGatewayRefs(resource('httpRedirect', httpRoute, name), gatewayName),
-      resource('pdb', pdb, name),
-      resource('egressNetpol', egressNetpol, name, {
-        spec: {
-          podSelector: {
-            matchLabels: {
-              'gateway.networking.k8s.io/gateway-name': gatewayName,
+          }
+        ),
+        if has(params.instances[name], 'gatewayParameters') then params.instances[name].gatewayParameters else {}
+      ),
+      withGatewayRefs(
+        std.mergePatch(
+          std.mergePatch(
+            httpRoute(kube.hyphenate(name)) + com.makeMergeable(
+              if has(params.default, 'httpRedirect')
+              then std.mergePatch(params.default.httpRedirect, metadataNamespace(name))
+              else metadataNamespace(name)
+            ),
+            {}
+          ),
+          if has(params.instances[name], 'httpRedirect') then params.instances[name].httpRedirect else {}
+        ),
+        gatewayName
+      ),
+      std.mergePatch(
+        std.mergePatch(
+          pdb(kube.hyphenate(name)) + com.makeMergeable(
+            if has(params.default, 'pdb')
+            then std.mergePatch(params.default.pdb, metadataNamespace(name))
+            else metadataNamespace(name)
+          ),
+          {}
+        ),
+        if has(params.instances[name], 'pdb') then params.instances[name].pdb else {}
+      ),
+      std.mergePatch(
+        std.mergePatch(
+          egressNetpol(kube.hyphenate(name)) + com.makeMergeable(
+            if has(params.default, 'egressNetpol')
+            then std.mergePatch(params.default.egressNetpol, metadataNamespace(name))
+            else metadataNamespace(name)
+          ),
+          {
+            spec: {
+              podSelector: {
+                matchLabels: {
+                  'gateway.networking.k8s.io/gateway-name': gatewayName,
+                },
+              },
             },
-          },
-        },
-      }),
-      resource('sessionHandling', gw.SessionHandling, name, {
-        spec: {
-          persistence: {
-            redisProviderRef: {
-              name: resourceName('redisProvider', name),
+          }
+        ),
+        if has(params.instances[name], 'egressNetpol') then params.instances[name].egressNetpol else {}
+      ),
+      std.mergePatch(
+        std.mergePatch(
+          gw.SessionHandling(kube.hyphenate(name)) + com.makeMergeable(
+            if has(params.default, 'sessionHandling')
+            then std.mergePatch(params.default.sessionHandling, metadataNamespace(name))
+            else metadataNamespace(name)
+          ),
+          {
+            spec: {
+              persistence: {
+                redisProviderRef: {
+                  name: resourceName('redisProvider', name),
+                },
+              },
             },
-          },
-        },
-      }),
-      resource('redisProvider', gw.RedisProvider, name),
+          }
+        ),
+        if has(params.instances[name], 'sessionHandling') then params.instances[name].sessionHandling else {}
+      ),
+      std.mergePatch(
+        std.mergePatch(
+          gw.RedisProvider(kube.hyphenate(name)) + com.makeMergeable(
+            if has(params.default, 'redisProvider')
+            then std.mergePatch(params.default.redisProvider, metadataNamespace(name))
+            else metadataNamespace(name)
+          ),
+          {}
+        ),
+        if has(params.instances[name], 'redisProvider') then params.instances[name].redisProvider else {}
+      ),
     ] + if has_cilium then [
       GatewayCNPIngress(name, gatewayName),
       GatewayCNPEgress(name, gatewayName),
