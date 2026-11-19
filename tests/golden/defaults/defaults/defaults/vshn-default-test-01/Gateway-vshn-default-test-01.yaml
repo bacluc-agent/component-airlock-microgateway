@@ -11,7 +11,7 @@ spec:
     parametersRef:
       group: microgateway.airlock.com
       kind: GatewayParameters
-      name: vshn-default-test-01
+      name: shared-gateway-parameters
   listeners:
     - allowedRoutes:
         namespaces:
