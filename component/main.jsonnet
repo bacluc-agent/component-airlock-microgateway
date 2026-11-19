@@ -170,10 +170,7 @@ local withGatewayRefs(route, gatewayName) =
   else
     route;
 
-// Generate a single resource of the given type for one instance.
-// Merges generator output, default parameters plus namespace, the explicit
-// derived refs object, then instance parameters, in that order.
-local buildResource(name, field, generator, derived={}) =
+local resource(field, generator, name, derived={}) =
   std.mergePatch(
     std.mergePatch(
       generator(kube.hyphenate(name)) + com.makeMergeable(
@@ -186,55 +183,56 @@ local buildResource(name, field, generator, derived={}) =
     if has(params.instances[name], field) then params.instances[name][field] else {}
   );
 
-local gateway(name) = buildResource(name, 'gateway', gw.Gateway, {
-  spec: { infrastructure: { parametersRef: {
-    group: 'microgateway.airlock.com',
-    kind: 'GatewayParameters',
-    name: resourceName('gatewayParameters', name),
-  } } },
-});
-
-local gatewayParameters(name) = buildResource(name, 'gatewayParameters', gw.GatewayParameters, {
-  spec: { defaults: { sessionHandlingRef: {
-    name: resourceName('sessionHandling', name),
-  } } },
-});
-
-local httpRedirect(name) = withGatewayRefs(
-  buildResource(name, 'httpRedirect', httpRoute),
-  resourceName('gateway', name)
-);
-
-local pdbResource(name) = buildResource(name, 'pdb', pdb);
-
-local egressNetpolResource(name) = buildResource(name, 'egressNetpol', egressNetpol, {
-  spec: { podSelector: { matchLabels: {
-    'gateway.networking.k8s.io/gateway-name': resourceName('gateway', name),
-  } } },
-});
-
-local sessionHandling(name) = buildResource(name, 'sessionHandling', gw.SessionHandling, {
-  spec: { persistence: { redisProviderRef: {
-    name: resourceName('redisProvider', name),
-  } } },
-});
-
-local redisProvider(name) = buildResource(name, 'redisProvider', gw.RedisProvider);
-
 // All per-instance resources, generated in an instance-outer loop
 local instanceResources = std.flatMap(
   function(instance)
+    local name = instance.key;
+    local gatewayName = resourceName('gateway', name);
     [
-      gateway(instance.key),
-      gatewayParameters(instance.key),
-      httpRedirect(instance.key),
-      pdbResource(instance.key),
-      egressNetpolResource(instance.key),
-      sessionHandling(instance.key),
-      redisProvider(instance.key),
+      resource('gateway', gw.Gateway, name, {
+        spec: {
+          infrastructure: {
+            parametersRef: {
+              group: 'microgateway.airlock.com',
+              kind: 'GatewayParameters',
+              name: resourceName('gatewayParameters', name),
+            },
+          },
+        },
+      }),
+      resource('gatewayParameters', gw.GatewayParameters, name, {
+        spec: {
+          defaults: {
+            sessionHandlingRef: {
+              name: resourceName('sessionHandling', name),
+            },
+          },
+        },
+      }),
+      withGatewayRefs(resource('httpRedirect', httpRoute, name), gatewayName),
+      resource('pdb', pdb, name),
+      resource('egressNetpol', egressNetpol, name, {
+        spec: {
+          podSelector: {
+            matchLabels: {
+              'gateway.networking.k8s.io/gateway-name': gatewayName,
+            },
+          },
+        },
+      }),
+      resource('sessionHandling', gw.SessionHandling, name, {
+        spec: {
+          persistence: {
+            redisProviderRef: {
+              name: resourceName('redisProvider', name),
+            },
+          },
+        },
+      }),
+      resource('redisProvider', gw.RedisProvider, name),
     ] + if has_cilium then [
-      GatewayCNPIngress(instance.key, resourceName('gateway', instance.key)),
-      GatewayCNPEgress(instance.key, resourceName('gateway', instance.key)),
+      GatewayCNPIngress(name, gatewayName),
+      GatewayCNPEgress(name, gatewayName),
     ] else [],
   std.objectKeysValues(params.instances)
 );
@@ -242,7 +240,5 @@ local instanceResources = std.flatMap(
 // Define outputs below
 toFiles(instanceResources) +
 namespaces
-// monitoring.jsonnet emits its own manifests and is instance-independent (singleton).
-+ (import 'monitoring.jsonnet')
 + (import 'custom-responses.jsonnet')
 + (import 'lib/debug.jsonnet')
