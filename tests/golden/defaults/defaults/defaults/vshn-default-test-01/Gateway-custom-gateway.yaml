@@ -3,7 +3,7 @@ kind: Gateway
 metadata:
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-  name: vshn-default-test-01
+  name: custom-gateway
   namespace: vshn-default-test-01
 spec:
   gatewayClassName: test-default

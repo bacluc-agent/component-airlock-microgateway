@@ -64,6 +64,19 @@ local namespaces = {
   for instance in std.objectKeysValues(params.instances)
 };
 
+// The final name of a resource, derived from the instance name unless the
+// user overrides metadata.name in the instance parameters.
+local resourceName(field, name) =
+  if has(params.instances[name], field)
+     && has(params.instances[name][field], 'metadata')
+     && has(params.instances[name][field].metadata, 'name')
+  then params.instances[name][field].metadata.name
+  else if has(params.default, field)
+          && has(params.default[field], 'metadata')
+          && has(params.default[field].metadata, 'name')
+  then params.default[field].metadata.name
+  else kube.hyphenate(name);
+
 local CiliumNetworkPolicy(name) = {
   apiVersion: 'cilium.io/v2',
   kind: 'CiliumNetworkPolicy',
@@ -81,7 +94,7 @@ local GatewayCNPEgress(name) =
     spec: {
       endpointSelector: {
         matchLabels: {
-          'gateway.networking.k8s.io/gateway-name': name,
+          'gateway.networking.k8s.io/gateway-name': resourceName('gateway', name),
           'microgateway.airlock.com/managedBy': params.operatorNamespace,
         },
       },
@@ -126,7 +139,7 @@ local GatewayCNPIngress(name) =
     spec: {
       endpointSelector: {
         matchLabels: {
-          'gateway.networking.k8s.io/gateway-name': name,
+          'gateway.networking.k8s.io/gateway-name': resourceName('gateway', name),
           'microgateway.airlock.com/managedBy': params.operatorNamespace,
         },
       },
@@ -142,19 +155,6 @@ local toFiles(objects) = {
   ['%s/%s-%s' % [ object.metadata.namespace, object.kind, object.metadata.name ]]: object
   for object in objects
 };
-
-// The final name of a resource, derived from the instance name unless the
-// user overrides metadata.name in the instance parameters.
-local resourceName(field, name) =
-  if has(params.instances[name], field)
-     && has(params.instances[name][field], 'metadata')
-     && has(params.instances[name][field].metadata, 'name')
-  then params.instances[name][field].metadata.name
-  else if has(params.default, field)
-          && has(params.default[field], 'metadata')
-          && has(params.default[field].metadata, 'name')
-  then params.default[field].metadata.name
-  else kube.hyphenate(name);
 
 // Cross-references derived from the instance name, injected between the
 // default and instance parameters so explicit user overrides still win.

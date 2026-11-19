@@ -19,6 +19,8 @@ parameters:
     instances:
       vshn-default-test-01:
         gateway:
+          metadata:
+            name: custom-gateway
           spec:
             gatewayClassName: test-default
             listeners:
