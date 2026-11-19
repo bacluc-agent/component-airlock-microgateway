@@ -3,8 +3,8 @@ kind: RedisProvider
 metadata:
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-  name: test-instance-null
-  namespace: test-instance-null
+  name: custom-redis-provider
+  namespace: test-instance-overriding-customResponses
 spec:
   auth:
     password:

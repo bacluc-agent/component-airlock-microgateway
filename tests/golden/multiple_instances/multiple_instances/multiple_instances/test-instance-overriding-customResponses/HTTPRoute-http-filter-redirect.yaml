@@ -7,10 +7,7 @@ spec:
   hostnames:
     - '*.test.com'
   parentRefs:
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: custom-gateway
-      sectionName: http-default
+    - name: explicit-gateway
   rules:
     - filters:
         - requestRedirect:

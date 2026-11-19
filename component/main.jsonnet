@@ -62,6 +62,7 @@ local namespaces = {
     },
   }
   for instance in std.objectKeysValues(params.instances)
+  if instance.value != null
 };
 
 // The final name of a resource, derived from the instance name unless the
@@ -286,7 +287,7 @@ local instanceResources = std.flatMap(
       GatewayCNPIngress(name, gatewayName),
       GatewayCNPEgress(name, gatewayName),
     ] else [],
-  std.objectKeysValues(params.instances)
+  std.filter(function(instance) instance.value != null, std.objectKeysValues(params.instances))
 );
 
 // Define outputs below

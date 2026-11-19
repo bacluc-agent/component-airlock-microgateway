@@ -108,6 +108,8 @@ data:
           port: 80
           protocol: "default"
     gatewayParameters:
+      metadata:
+        name: "custom-gateway-parameters"
       spec:
         defaults:
           customResponses:
@@ -196,9 +198,7 @@ data:
         hostnames:
         - "*.test.com"
         parentRefs:
-        - group: "gateway.networking.k8s.io"
-          kind: "Gateway"
-          sectionName: "http-default"
+        - name: "explicit-gateway"
         rules:
         - filters:
           - requestRedirect:
@@ -223,6 +223,8 @@ data:
             gateway.networking.k8s.io/gateway-name: "vshn-instances-test-01"
         unhealthyPodEvictionPolicy: "IfHealthyBudget"
     redisProvider:
+      metadata:
+        name: "custom-redis-provider"
       spec:
         auth:
           password:
@@ -247,6 +249,8 @@ data:
             secretRef:
               name: "redis-clientcert"
     sessionHandling:
+      metadata:
+        name: "custom-session-handling"
       spec:
         auth:
           password:
