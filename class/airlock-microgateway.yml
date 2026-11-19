@@ -7,6 +7,9 @@ parameters:
         output_path: .
       - input_paths:
           - ${_base_directory}/component/main.jsonnet
+        input_type: jsonnet
+        output_path: ${_instance}
+      - input_paths:
           - ${_base_directory}/component/monitoring.jsonnet
         input_type: jsonnet
         output_path: ${_instance}
