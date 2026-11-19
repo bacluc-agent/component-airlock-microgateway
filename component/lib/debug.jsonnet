@@ -18,4 +18,5 @@ local debugConfigMap(namespace, instanceParams) = kube._Object('v1', 'ConfigMap'
 {
   [if params.debug then 'debug/%s' % instance.key]: debugConfigMap(instance.key, std.mergePatch(params.default, if instance.value == null then {} else instance.value))
   for instance in std.objectKeysValues(params.instances)
+  if instance.value != null
 }
