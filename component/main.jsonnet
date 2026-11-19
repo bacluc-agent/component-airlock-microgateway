@@ -160,6 +160,8 @@ local derivedRefs(field, name) =
     spec: {
       infrastructure: {
         parametersRef: {
+          group: 'microgateway.airlock.com',
+          kind: 'GatewayParameters',
           name: resourceName('gatewayParameters', name),
         },
       },
