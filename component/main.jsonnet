@@ -170,6 +170,7 @@ local withGatewayRefs(route, gatewayName) =
   else
     route;
 
+// Merge order (last wins): generator, default+namespace, derived refs, instance params.
 local resource(field, generator, name, derived={}) =
   std.mergePatch(
     std.mergePatch(
