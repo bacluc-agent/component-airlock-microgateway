@@ -1,0 +1,13 @@
+apiVersion: microgateway.airlock.com/v1alpha1
+kind: CustomResponse
+metadata:
+  labels:
+    name: 5xx
+  name: 5xx
+  namespace: test-instance-null
+spec:
+  content:
+    - body:
+        value: |
+          %RESPONSE_CODE%
+      contentType: text/html

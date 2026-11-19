@@ -1,0 +1,33 @@
+apiVersion: microgateway.airlock.com/v1alpha1
+kind: SessionHandling
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  name: test-instance-null
+  namespace: test-instance-null
+spec:
+  auth:
+    password:
+      secretRef:
+        name: redis-password
+    username: default
+  mode:
+    standalone:
+      host: redis-master
+      port: 6379
+  persistence:
+    redisProviderRef:
+      name: test-instance-null
+  timeouts:
+    connect: 10s
+    maxDuration: 2s
+  tls:
+    certificateVerification:
+      custom:
+        trustedCA:
+          certificates:
+            - secretRef:
+                name: redis-ca
+    clientCertificate:
+      secretRef:
+        name: redis-clientcert

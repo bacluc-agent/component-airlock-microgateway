@@ -341,6 +341,7 @@ parameters:
                   nodeSelector:
                     node-role.kubernetes.io/test: ""
       test-instance-02: {}
+      test-instance-null: null
       test-instance-overriding-customResponses:
         gateway:
           metadata:

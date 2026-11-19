@@ -1,0 +1,119 @@
+apiVersion: microgateway.airlock.com/v1alpha1
+kind: GatewayParameters
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  name: test-instance-null
+  namespace: test-instance-null
+spec:
+  defaults:
+    customResponses:
+      local:
+        - customResponseRef:
+            name: '401'
+          statusCodeCondition:
+            matcher:
+              exact: 401
+        - customResponseRef:
+            name: '403'
+          statusCodeCondition:
+            matcher:
+              exact: 403
+        - customResponseRef:
+            name: '404'
+          statusCodeCondition:
+            matcher:
+              exact: 404
+        - customResponseRef:
+            name: 4xx
+          statusCodeCondition:
+            matcher:
+              range:
+                from: 400
+                to: 499
+        - customResponseRef:
+            name: '502'
+          statusCodeCondition:
+            matcher:
+              exact: 502
+        - customResponseRef:
+            name: 5xx
+          statusCodeCondition:
+            matcher:
+              range:
+                from: 500
+                to: 599
+      upstream:
+        - customResponseRef:
+            name: '401'
+          responseConditions:
+            statusCode:
+              matcher:
+                exact: 401
+        - customResponseRef:
+            name: '403'
+          responseConditions:
+            statusCode:
+              matcher:
+                exact: 403
+        - customResponseRef:
+            name: '404'
+          responseConditions:
+            statusCode:
+              matcher:
+                exact: 404
+        - customResponseRef:
+            name: 4xx
+          responseConditions:
+            statusCode:
+              matcher:
+                range:
+                  end: 499
+                  start: 400
+        - customResponseRef:
+            name: '502'
+          responseConditions:
+            statusCode:
+              matcher:
+                exact: 502
+        - customResponseRef:
+            name: 5xx
+          responseConditions:
+            statusCode:
+              matcher:
+                range:
+                  end: 599
+                  start: 500
+    downstream:
+      remoteIP:
+        proxyProtocol: {}
+    sessionHandlingRef:
+      name: test-instance-null
+  features:
+    envoyExtensionPolicyEnabled: true
+    insecureTLSAllowed: true
+  kubernetes:
+    deployment:
+      automountServiceAccountToken: false
+      engineContainer:
+        resources:
+          limits:
+            cpu: 1
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+      placement:
+        affinity:
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchExpressions:
+                    - key: gateway.networking.k8s.io/gateway-name
+                      operator: In
+                      values:
+                        - vshn-instances-test-01
+                topologyKey: kubernetes.io/hostname
+        nodeSelector:
+          node-role.kubernetes.io/infra: ''
+      replicas: 2
