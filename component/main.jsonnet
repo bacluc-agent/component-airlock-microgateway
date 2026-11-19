@@ -85,16 +85,16 @@ local CiliumNetworkPolicy(name) = {
   },
 };
 
-local GatewayCNPEgress(name) =
-  CiliumNetworkPolicy(name) {
+local GatewayCNPEgress(namespace, gatewayName) =
+  CiliumNetworkPolicy(gatewayName) {
     metadata: {
       name: 'internal-dns-egress',
-      namespace: name,
+      namespace: namespace,
     },
     spec: {
       endpointSelector: {
         matchLabels: {
-          'gateway.networking.k8s.io/gateway-name': resourceName('gateway', name),
+          'gateway.networking.k8s.io/gateway-name': gatewayName,
           'microgateway.airlock.com/managedBy': params.operatorNamespace,
         },
       },
@@ -130,16 +130,16 @@ local GatewayCNPEgress(name) =
     },
   };
 
-local GatewayCNPIngress(name) =
-  CiliumNetworkPolicy(name) {
+local GatewayCNPIngress(namespace, gatewayName) =
+  CiliumNetworkPolicy(gatewayName) {
     metadata: {
       name: 'allow-ingress-world',
-      namespace: name,
+      namespace: namespace,
     },
     spec: {
       endpointSelector: {
         matchLabels: {
-          'gateway.networking.k8s.io/gateway-name': resourceName('gateway', name),
+          'gateway.networking.k8s.io/gateway-name': gatewayName,
           'microgateway.airlock.com/managedBy': params.operatorNamespace,
         },
       },
@@ -241,8 +241,8 @@ local instanceResources = std.flatMap(
       resource('sessionHandling', gw.SessionHandling, instance.key),
       resource('redisProvider', gw.RedisProvider, instance.key),
     ] + if has_cilium then [
-      GatewayCNPIngress(instance.key),
-      GatewayCNPEgress(instance.key),
+      GatewayCNPIngress(instance.key, resourceName('gateway', instance.key)),
+      GatewayCNPEgress(instance.key, resourceName('gateway', instance.key)),
     ] else [],
   std.objectKeysValues(params.instances)
 );

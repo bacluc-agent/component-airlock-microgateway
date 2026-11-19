@@ -342,6 +342,9 @@ parameters:
                     node-role.kubernetes.io/test: ""
       test-instance-02: {}
       test-instance-overriding-customResponses:
+        gateway:
+          metadata:
+            name: custom-gateway
         gatewayParamters:
           spec:
             defaults:
