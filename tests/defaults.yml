@@ -70,6 +70,8 @@ parameters:
               "gateway.networking.k8s.io/gateway-name": vshn-default-test-01
           unhealthyPodEvictionPolicy: IfHealthyBudget
       gatewayParameters:
+        metadata:
+          name: shared-gateway-parameters
         spec:
           defaults:
             downstream:

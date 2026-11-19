@@ -150,6 +150,10 @@ local resourceName(field, name) =
      && has(params.instances[name][field], 'metadata')
      && has(params.instances[name][field].metadata, 'name')
   then params.instances[name][field].metadata.name
+  else if has(params.default, field)
+          && has(params.default[field], 'metadata')
+          && has(params.default[field].metadata, 'name')
+  then params.default[field].metadata.name
   else kube.hyphenate(name);
 
 // Cross-references derived from the instance name, injected between the
@@ -160,6 +164,8 @@ local derivedRefs(field, name) =
     spec: {
       infrastructure: {
         parametersRef: {
+          group: 'microgateway.airlock.com',
+          kind: 'GatewayParameters',
           name: resourceName('gatewayParameters', name),
         },
       },
