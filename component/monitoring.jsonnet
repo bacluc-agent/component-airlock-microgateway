@@ -2,7 +2,6 @@ local kube = import 'kube-ssa-compat.libsonnet';
 local com = import 'lib/commodore.libjsonnet';
 local kap = import 'lib/kapitan.libjsonnet';
 local prom = import 'lib/prom.libsonnet';
-local main = import 'main.jsonnet';
 
 local inv = kap.inventory();
 local params = inv.parameters.airlock_microgateway.monitoring;

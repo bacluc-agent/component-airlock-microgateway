@@ -87,10 +87,11 @@ data:
         podSelector:
           matchLabels:
             gateway.networking.k8s.io/gateway-class-name: "microgateway-cloudscale"
-            gateway.networking.k8s.io/gateway-name: "vshn-instances-test-01"
         policyTypes:
         - "Egress"
     gateway:
+      metadata:
+        name: "custom-gateway"
       spec:
         gatewayClassName: "test-default"
         listeners:
@@ -107,44 +108,17 @@ data:
           port: 80
           protocol: "default"
     gatewayParameters:
+      metadata:
+        name: "custom-gateway-parameters"
       spec:
         defaults:
           customResponses:
             local:
             - customResponseRef:
-                name: "401"
+                name: "301"
               statusCodeCondition:
                 matcher:
-                  exact: 401
-            - customResponseRef:
-                name: "403"
-              statusCodeCondition:
-                matcher:
-                  exact: 403
-            - customResponseRef:
-                name: "404"
-              statusCodeCondition:
-                matcher:
-                  exact: 404
-            - customResponseRef:
-                name: "4xx"
-              statusCodeCondition:
-                matcher:
-                  range:
-                    end: 499
-                    start: 400
-            - customResponseRef:
-                name: "502"
-              statusCodeCondition:
-                matcher:
-                  exact: 502
-            - customResponseRef:
-                name: "5xx"
-              statusCodeCondition:
-                matcher:
-                  range:
-                    end: 599
-                    start: 500
+                  exact: 301
             upstream:
             - customResponseRef:
                 name: "401"
@@ -189,8 +163,6 @@ data:
           downstream:
             remoteIP:
               proxyProtocol: {}
-          sessionHandlingRef:
-            name: "redis-session"
         features:
           envoyExtensionPolicyEnabled: true
           insecureTLSAllowed: true
@@ -219,28 +191,14 @@ data:
               nodeSelector:
                 node-role.kubernetes.io/infra: ""
             replicas: 2
-    gatewayParamters:
-      spec:
-        defaults:
-          customResponses:
-            local:
-            - customResponseRef:
-                name: "301"
-              statusCodeCondition:
-                matcher:
-                  exact: 301
     httpRedirect:
       metadata:
         name: "http-filter-redirect"
-        namespace: "vshn-instances-test-01"
       spec:
         hostnames:
         - "*.test.com"
         parentRefs:
-        - group: "gateway.networking.k8s.io"
-          kind: "Gateway"
-          name: "vshn-instances-test-01"
-          sectionName: "http-default"
+        - name: "explicit-gateway"
         rules:
         - filters:
           - requestRedirect:
@@ -258,11 +216,6 @@ data:
         appuio.ch/waf: "airlock"
         vshn.microgateway/redis-sync-secret: "true"
     pdb:
-      metadata:
-        labels:
-          gateway.networking.k8s.io/gateway-name: "vshn-instances-test-01"
-        name: "vshn-instances-test-01"
-        namespace: "vshn-instances-test-01"
       spec:
         minAvailable: 1
         selector:
@@ -270,6 +223,8 @@ data:
             gateway.networking.k8s.io/gateway-name: "vshn-instances-test-01"
         unhealthyPodEvictionPolicy: "IfHealthyBudget"
     redisProvider:
+      metadata:
+        name: "custom-redis-provider"
       spec:
         auth:
           password:
@@ -294,6 +249,8 @@ data:
             secretRef:
               name: "redis-clientcert"
     sessionHandling:
+      metadata:
+        name: "custom-session-handling"
       spec:
         auth:
           password:

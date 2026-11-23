@@ -3,10 +3,15 @@ kind: Gateway
 metadata:
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-  name: test-instance-overriding-customResponses
+  name: custom-gateway
   namespace: test-instance-overriding-customResponses
 spec:
   gatewayClassName: test-default
+  infrastructure:
+    parametersRef:
+      group: microgateway.airlock.com
+      kind: GatewayParameters
+      name: custom-gateway-parameters
   listeners:
     - allowedRoutes:
         namespaces:

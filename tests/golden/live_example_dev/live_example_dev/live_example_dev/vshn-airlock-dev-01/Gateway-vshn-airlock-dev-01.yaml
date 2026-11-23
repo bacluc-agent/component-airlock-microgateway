@@ -12,7 +12,7 @@ spec:
     parametersRef:
       group: microgateway.airlock.com
       kind: GatewayParameters
-      name: parameters-dev-01
+      name: vshn-airlock-dev-01
   listeners:
     - name: http-default
       port: 80

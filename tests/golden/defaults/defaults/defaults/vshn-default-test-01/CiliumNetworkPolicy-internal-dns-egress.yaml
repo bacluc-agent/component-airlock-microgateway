@@ -18,5 +18,5 @@ spec:
               - matchPattern: '*'
   endpointSelector:
     matchLabels:
-      gateway.networking.k8s.io/gateway-name: vshn-default-test-01
+      gateway.networking.k8s.io/gateway-name: custom-gateway
       microgateway.airlock.com/managedBy: test-operator-namespace

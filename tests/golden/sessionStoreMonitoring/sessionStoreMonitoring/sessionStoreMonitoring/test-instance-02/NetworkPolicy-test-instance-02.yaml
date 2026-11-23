@@ -3,3 +3,7 @@ kind: NetworkPolicy
 metadata:
   name: test-instance-02
   namespace: test-instance-02
+spec:
+  podSelector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: test-instance-02

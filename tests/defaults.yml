@@ -19,6 +19,8 @@ parameters:
     instances:
       vshn-default-test-01:
         gateway:
+          metadata:
+            name: custom-gateway
           spec:
             gatewayClassName: test-default
             listeners:
@@ -63,11 +65,6 @@ parameters:
               port: 80
               protocol: default
       pdb:
-        metadata:
-          labels:
-            gateway.networking.k8s.io/gateway-name: vshn-default-test-01
-          name: vshn-default-test-01
-          namespace: vshn-default-test-01
         spec:
           minAvailable: 1
           selector:
@@ -75,13 +72,13 @@ parameters:
               "gateway.networking.k8s.io/gateway-name": vshn-default-test-01
           unhealthyPodEvictionPolicy: IfHealthyBudget
       gatewayParameters:
+        metadata:
+          name: shared-gateway-parameters
         spec:
           defaults:
             downstream:
               remoteIP:
                 proxyProtocol: {}
-            sessionHandlingRef:
-              name: redis-session
           features:
             envoyExtensionPolicyEnabled: true
             insecureTLSAllowed: true
@@ -162,7 +159,6 @@ parameters:
           podSelector:
             matchLabels:
               gateway.networking.k8s.io/gateway-class-name: microgateway-cloudscale
-              gateway.networking.k8s.io/gateway-name: vshn-default-test-01
           policyTypes: [Egress]
           egress:
             - to:
@@ -182,11 +178,9 @@ parameters:
       httpRedirect:
         metadata:
           name: http-filter-redirect
-          namespace: vshn-default-test-01
         spec:
           parentRefs:
             - group: gateway.networking.k8s.io
-              name: vshn-default-test-01
               kind: Gateway
               sectionName: http-default
           hostnames:
