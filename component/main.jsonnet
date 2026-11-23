@@ -221,26 +221,20 @@ local gatewayParametersResource(name) =
 
 local httpRedirectResource(name) =
   std.mergePatch(
-    std.mergePatch(
-      httpRoute(kube.hyphenate(name)) + com.makeMergeable(
-        if has(params.default, 'httpRedirect')
-        then std.mergePatch(params.default.httpRedirect, metadataNamespace(name))
-        else metadataNamespace(name)
-      ),
-      {}
+    httpRoute(kube.hyphenate(name)) + com.makeMergeable(
+      if has(params.default, 'httpRedirect')
+      then std.mergePatch(params.default.httpRedirect, metadataNamespace(name))
+      else metadataNamespace(name)
     ),
     if has(params.instances[name], 'httpRedirect') then params.instances[name].httpRedirect else {}
   );
 
 local pdbResource(name) =
   std.mergePatch(
-    std.mergePatch(
-      pdb(kube.hyphenate(name)) + com.makeMergeable(
-        if has(params.default, 'pdb')
-        then std.mergePatch(params.default.pdb, metadataNamespace(name))
-        else metadataNamespace(name)
-      ),
-      {}
+    pdb(kube.hyphenate(name)) + com.makeMergeable(
+      if has(params.default, 'pdb')
+      then std.mergePatch(params.default.pdb, metadataNamespace(name))
+      else metadataNamespace(name)
     ),
     if has(params.instances[name], 'pdb') then params.instances[name].pdb else {}
   );
@@ -289,13 +283,10 @@ local sessionHandlingResource(name) =
 
 local redisProviderResource(name) =
   std.mergePatch(
-    std.mergePatch(
-      gw.RedisProvider(kube.hyphenate(name)) + com.makeMergeable(
-        if has(params.default, 'redisProvider')
-        then std.mergePatch(params.default.redisProvider, metadataNamespace(name))
-        else metadataNamespace(name)
-      ),
-      {}
+    gw.RedisProvider(kube.hyphenate(name)) + com.makeMergeable(
+      if has(params.default, 'redisProvider')
+      then std.mergePatch(params.default.redisProvider, metadataNamespace(name))
+      else metadataNamespace(name)
     ),
     if has(params.instances[name], 'redisProvider') then params.instances[name].redisProvider else {}
   );
