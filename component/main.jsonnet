@@ -3,6 +3,7 @@ local kube = import 'kube-ssa-compat.libsonnet';
 local gw = import 'lib/airlock-microgateway-operator.libsonnet';
 local com = import 'lib/commodore.libjsonnet';
 local kap = import 'lib/kapitan.libjsonnet';
+local redisSecretSync = import 'lib/redis-secret-sync.libsonnet';
 
 local inv = kap.inventory();
 
@@ -164,10 +165,11 @@ local instanceResources = std.flatMap(
       resource('egressNetpol', egressNetpol, instance.key),
       resource('sessionHandling', gw.SessionHandling, instance.key),
       resource('redisProvider', gw.RedisProvider, instance.key),
-    ] + if has_cilium then [
+    ] + (if has_cilium then [
       GatewayCNPIngress(instance.key),
       GatewayCNPEgress(instance.key),
-    ] else [],
+    ] else [])
+           + redisSecretSync.resources(instance.key),
   std.objectKeysValues(params.instances)
 );
 

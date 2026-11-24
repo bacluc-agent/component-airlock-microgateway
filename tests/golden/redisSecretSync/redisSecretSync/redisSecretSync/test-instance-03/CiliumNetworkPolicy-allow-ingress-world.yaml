@@ -1,0 +1,13 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ingress-world
+  namespace: test-instance-03
+spec:
+  endpointSelector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: test-instance-03
+      microgateway.airlock.com/managedBy: test-operator-namespace
+  ingress:
+    - fromEntities:
+        - world

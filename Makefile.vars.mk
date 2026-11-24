@@ -42,6 +42,11 @@ ANTORA_PREVIEW_CMD ?= $(DOCKER_CMD) run --rm --publish 35729:35729 --publish 202
 COMMODORE_CMD  ?= $(DOCKER_CMD) $(DOCKER_ARGS) $(git_volume) $(root_volume) docker.io/projectsyn/commodore:latest
 COMPILE_CMD    ?= $(COMMODORE_CMD) component compile . $(commodore_args)
 JB_CMD         ?= $(DOCKER_CMD) $(DOCKER_ARGS) --entrypoint /usr/local/bin/jb docker.io/projectsyn/commodore:latest install
+
+ESPEJOTE_VERSION ?= v0.22.0
+ESPEJOTE_IMAGE   ?= ghcr.io/vshn/espejote:$(ESPEJOTE_VERSION)
+ESPEJOTE_CMD     ?= $(DOCKER_CMD) $(DOCKER_ARGS) $(root_volume) --entrypoint=/usr/bin/espejote $(ESPEJOTE_IMAGE)
+
 GOLDEN_FILES    ?= $(shell find tests/golden/$(instance) -type f)
 
 KUBENT_FILES    ?= $(shell echo "$(GOLDEN_FILES)" | sed 's/ /,/g')
@@ -50,4 +55,5 @@ KUBENT_IMAGE    ?= ghcr.io/doitintl/kube-no-trouble:latest
 KUBENT_DOCKER   ?= $(DOCKER_CMD) $(DOCKER_ARGS) $(root_volume) --entrypoint=/app/kubent $(KUBENT_IMAGE)
 
 instance ?= defaults
-test_instances = tests/defaults.yml tests/multiple_instances.yml tests/live_example_dev.yml tests/sessionStoreMonitoring.yml tests/monitoring.yml
+espejote_instance ?= redisSecretSync
+test_instances = tests/defaults.yml tests/multiple_instances.yml tests/live_example_dev.yml tests/sessionStoreMonitoring.yml tests/monitoring.yml tests/redisSecretSync.yml

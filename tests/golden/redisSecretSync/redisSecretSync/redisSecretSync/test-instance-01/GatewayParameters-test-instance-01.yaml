@@ -1,0 +1,11 @@
+apiVersion: microgateway.airlock.com/v1alpha1
+kind: GatewayParameters
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  name: test-instance-01
+  namespace: test-instance-01
+spec:
+  kubernetes:
+    deployment:
+      replicas: 2
