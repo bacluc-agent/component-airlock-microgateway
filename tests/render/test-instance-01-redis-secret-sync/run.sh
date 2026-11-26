@@ -38,7 +38,7 @@ for input in "${INPUTS[@]}"; do
     FAILED=1
     continue
   fi
-  if [ -s "$TMP_ERR" ]; then
+  if grep -q '^Error:' "$TMP_ERR"; then
     if [ -f "$HERE/$CASE_DIR/error.txt" ] && grep -qF "$(cat "$HERE/$CASE_DIR/error.txt")" "$TMP_ERR"; then
       continue
     fi
