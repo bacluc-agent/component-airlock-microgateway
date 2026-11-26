@@ -45,22 +45,7 @@ parameters:
         enabled: false
         sourceNamespace: vshn-airlock-redis
         secrets:
-          redis-password:
-            redis.password:
-              secretName: redis-creds-connection
-              key: REDIS_PASSWORD
-          redis-ca:
-            ca.crt:
-              secretName: redis-creds-connection
-              key: ca.crt
-          redis-clientcert:
-            type: kubernetes.io/tls
-            tls.crt:
-              secretName: redis-creds-connection
-              key: tls.crt
-            tls.key:
-              secretName: redis-creds-connection
-              key: tls.key
+          redis: redis-creds-connection
       gateway: {}
       gatewayParameters:
         spec:

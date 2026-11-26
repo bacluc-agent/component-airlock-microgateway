@@ -2,6 +2,16 @@
 # Trigger: {"TriggerName":"managed_secret","WatchResource":{"apiVersion":"v1","kind":"Secret","name":"redis-password","namespace":"test-instance-01"}}
 - apiVersion: v1
   data:
+    redis.password: bmV3LXBhc3N3b3Jk
+  kind: Secret
+  metadata:
+    labels:
+      espejote.io/managed-by: test-instance-01.redis-secret-sync
+    name: redis-password
+    namespace: test-instance-01
+  type: Opaque
+- apiVersion: v1
+  data:
     ca.crt: Y2E=
   kind: Secret
   metadata:
@@ -21,13 +31,3 @@
     name: redis-clientcert
     namespace: test-instance-01
   type: kubernetes.io/tls
-- apiVersion: v1
-  data:
-    redis.password: bmV3LXBhc3N3b3Jk
-  kind: Secret
-  metadata:
-    labels:
-      espejote.io/managed-by: test-instance-01.redis-secret-sync
-    name: redis-password
-    namespace: test-instance-01
-  type: Opaque

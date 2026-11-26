@@ -1,6 +1,16 @@
 ---
 - apiVersion: v1
   data:
+    redis.password: cGFzc3dvcmQ=
+  kind: Secret
+  metadata:
+    labels:
+      espejote.io/managed-by: test-instance-02.redis-secret-sync
+    name: redis-password
+    namespace: test-instance-02
+  type: Opaque
+- apiVersion: v1
+  data:
     ca.crt: Y2E=
   kind: Secret
   metadata:
@@ -22,24 +32,32 @@
   type: kubernetes.io/tls
 - apiVersion: v1
   data:
-    ca.crt: Y2E=
-    redis.username: dXNlcg==
-    tls.crt: Y3J0
-    tls.key: a2V5
+    redis.password: b2xkcGFzc3dvcmQ=
   kind: Secret
   metadata:
     labels:
       espejote.io/managed-by: test-instance-02.redis-secret-sync
-    name: redis-merged
-    namespace: test-instance-02
-  type: kubernetes.io/tls
-- apiVersion: v1
-  data:
-    redis.password: cGFzc3dvcmQ=
-  kind: Secret
-  metadata:
-    labels:
-      espejote.io/managed-by: test-instance-02.redis-secret-sync
-    name: redis-password
+    name: redis-old-password
     namespace: test-instance-02
   type: Opaque
+- apiVersion: v1
+  data:
+    ca.crt: b2xkY2E=
+  kind: Secret
+  metadata:
+    labels:
+      espejote.io/managed-by: test-instance-02.redis-secret-sync
+    name: redis-old-ca
+    namespace: test-instance-02
+  type: Opaque
+- apiVersion: v1
+  data:
+    tls.crt: b2xkY3J0
+    tls.key: b2xka2V5
+  kind: Secret
+  metadata:
+    labels:
+      espejote.io/managed-by: test-instance-02.redis-secret-sync
+    name: redis-old-clientcert
+    namespace: test-instance-02
+  type: kubernetes.io/tls

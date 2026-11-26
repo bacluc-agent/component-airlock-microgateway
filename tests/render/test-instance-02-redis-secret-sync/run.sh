@@ -47,6 +47,12 @@ for input in "${INPUTS[@]}"; do
     FAILED=1
     continue
   fi
+  if [ ! -s "$TMP" ]; then
+    echo "FAIL: render produced no output for $CASE" >&2
+    cat "$TMP_ERR" >&2
+    FAILED=1
+    continue
+  fi
   if [ -f "$HERE/$CASE_DIR/error.txt" ]; then
     echo "FAIL: render succeeded for $CASE but an error was expected" >&2
     FAILED=1

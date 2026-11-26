@@ -12,6 +12,66 @@ local config(name) = std.mergePatch(
   instanceConfig(name)
 );
 
+local requiredKeys = [ 'REDIS_PASSWORD', 'ca.crt', 'tls.crt', 'tls.key' ];
+
+local secretsOf(cfg) = if std.get(cfg, 'secrets', null) == null then {} else cfg.secrets;
+
+local entries(cfg) = [
+  {
+    prefix: prefix,
+    source: secretsOf(cfg)[prefix],
+  }
+  for prefix in std.sort(std.objectFields(secretsOf(cfg)))
+  if secretsOf(cfg)[prefix] != null
+];
+
+local sourceNames(cfg) = std.set([ entry.source for entry in entries(cfg) ]);
+
+local sourceIndex(cfg) =
+  local names = sourceNames(cfg);
+  {
+    [names[i]]: i
+    for i in std.range(0, std.length(names) - 1)
+  };
+
+local sourceContextName(cfg, sourceName) = 'source_secret_%d' % sourceIndex(cfg)[sourceName];
+
+local sourceRefs(cfg) = [
+  {
+    name: name,
+    context: sourceContextName(cfg, name),
+  }
+  for name in sourceNames(cfg)
+];
+
+local targets(cfg) = [
+  target
+  for entry in entries(cfg)
+  for target in [
+    {
+      name: '%s-password' % entry.prefix,
+      source: entry.source,
+      type: 'Opaque',
+      data: { 'redis.password': 'REDIS_PASSWORD' },
+    },
+    {
+      name: '%s-ca' % entry.prefix,
+      source: entry.source,
+      type: 'Opaque',
+      data: { 'ca.crt': 'ca.crt' },
+    },
+    {
+      name: '%s-clientcert' % entry.prefix,
+      source: entry.source,
+      type: 'kubernetes.io/tls',
+      data: {
+        'tls.crt': 'tls.crt',
+        'tls.key': 'tls.key',
+      },
+    },
+  ]
+];
+
 local serviceAccount(name, serviceAccountName) = {
   apiVersion: 'v1',
   kind: 'ServiceAccount',
@@ -86,60 +146,28 @@ local targetRole(name, roleName) = {
   ],
 };
 
-local secretsOf(cfg) = if cfg.secrets == null then {} else cfg.secrets;
+local sourceSecret(cfg, source) = |||
+  local %(context)s =
+    local sources = context.%(context)s;
+    assert std.length(sources) == 1 : %(one)s;
+    assert !inDelete(sources[0]) : %(deleting)s;
+    assert std.all([std.objectHas(std.get(sources[0], 'data', {}), key) for key in requiredKeys]) : %(keys)s;
+    sources[0];
+||| % {
+  context: source.context,
+  one: std.manifestJson('Expected exactly one secret %s in namespace %s' % [ source.name, cfg.sourceNamespace ]),
+  deleting: std.manifestJson('Secret %s in namespace %s is being deleted' % [ source.name, cfg.sourceNamespace ]),
+  keys: std.manifestJson('Secret %s in namespace %s must contain keys %s' % [ source.name, cfg.sourceNamespace, std.join(', ', requiredKeys) ]),
+};
 
-local secretNames(cfg) = [
-  name
-  for name in std.objectFields(secretsOf(cfg))
-  if secretsOf(cfg)[name] != null
-];
-
-local targetKeys(target) = [
-  key
-  for key in std.objectFields(target)
-  if key != 'type'
-];
-
-local sourceSecretNames(cfg) = std.set([
-  secretsOf(cfg)[name][key].secretName
-  for name in secretNames(cfg)
-  for key in targetKeys(secretsOf(cfg)[name])
-]);
-
-local sourceIndex(cfg) =
-  local names = sourceSecretNames(cfg);
-  {
-    [names[i]]: i
-    for i in std.range(0, std.length(names) - 1)
-  };
-
-local sourceContextName(cfg, sourceName) = 'source_secret_%d' % sourceIndex(cfg)[sourceName];
-
-local sourceRefs(cfg) = [
-  {
-    name: name,
-    context: sourceContextName(cfg, name),
-  }
-  for name in sourceSecretNames(cfg)
-];
-
-local sourceSecret(cfg, source) = std.join('\n', [
-  'local %s =' % source.context,
-  '  local sources = context.%s;' % source.context,
-  "  assert std.length(sources) == 1 : 'Expected exactly one secret %s in namespace %s';" % [ source.name, cfg.sourceNamespace ],
-  "  assert !inDelete(sources[0]) : 'Secret %s in namespace %s is being deleted';" % [ source.name, cfg.sourceNamespace ],
-  '  sources[0];',
-]);
-
-local secret(cfg, name, targetNamespace) =
-  local target = secretsOf(cfg)[name];
+local secret(cfg, target, targetNamespace) =
   local dataEntries = [
     '%s: %s.data[%s]' % [
       std.manifestJson(key),
-      sourceContextName(cfg, target[key].secretName),
-      std.manifestJson(target[key].key),
+      sourceContextName(cfg, target.source),
+      std.manifestJson(target.data[key]),
     ]
-    for key in targetKeys(target)
+    for key in std.objectFields(target.data)
   ];
   |||
     {
@@ -156,13 +184,10 @@ local secret(cfg, name, targetNamespace) =
       type: %(type)s,
     },
   ||| % {
-    name: std.manifestJson(name),
+    name: std.manifestJson(target.name),
     namespace: std.manifestJson(targetNamespace),
-    data: std.join(',\n    ', [
-      '%s' % entry
-      for entry in dataEntries
-    ]),
-    type: std.manifestJson(std.get(target, 'type', 'Opaque')),
+    data: std.join(',\n    ', dataEntries),
+    type: std.manifestJson(target.type),
   };
 
 local template(cfg, name) = |||
@@ -171,19 +196,21 @@ local template(cfg, name) = |||
   local context = esp.context();
   local managedBy = { 'espejote.io/managed-by': '%(managedBy)s' };
   local inDelete(obj) = std.get(obj.metadata, 'deletionTimestamp', '') != '';
+  local requiredKeys = %(requiredKeys)s;
   %(sources)s
   [
   %(secrets)s
   ]
 ||| % {
   managedBy: '%s.redis-secret-sync' % name,
+  requiredKeys: std.manifestJson(requiredKeys),
   sources: std.join('\n', [
     sourceSecret(cfg, source)
     for source in sourceRefs(cfg)
   ]),
   secrets: std.join('', [
-    secret(cfg, secretName, name)
-    for secretName in secretNames(cfg)
+    secret(cfg, target, name)
+    for target in targets(cfg)
   ]),
 };
 
@@ -248,7 +275,7 @@ local managedResource(name) =
 {
   resources(name):
     local cfg = config(name);
-    if !std.get(cfg, 'enabled', false) then []
+    if !std.get(cfg, 'enabled', false) || std.length(entries(cfg)) == 0 then []
     else
       local serviceAccountName = name + '-redis-secret-sync';
       local sourceRoleName = serviceAccountName + '-source';

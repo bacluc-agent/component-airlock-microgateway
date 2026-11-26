@@ -1,0 +1,17 @@
+# Error case: a required key is absent from the source secret.
+triggers:
+  - {}
+context:
+  - name: source_secret_0
+    resources:
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: redis-creds-connection
+          namespace: vshn-airlock-redis
+        data:
+          REDIS_PASSWORD: cGFzc3dvcmQ=
+          ca.crt: Y2E=
+          tls.crt: Y3J0
+        type: Opaque
+libraries: {}

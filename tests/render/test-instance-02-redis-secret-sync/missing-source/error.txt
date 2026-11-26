@@ -1,1 +1,1 @@
-Expected exactly one secret redis-tls in namespace vshn-airlock-redis
+Expected exactly one secret redis-creds-connection-old in namespace vshn-airlock-redis

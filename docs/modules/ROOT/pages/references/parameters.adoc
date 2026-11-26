@@ -132,20 +132,21 @@ The feature is disabled by default and can be enabled for all instances through 
 
 [horizontal]
 type:: object
-default:: `enabled: false`
+default:: `enabled: false`, `sourceNamespace: vshn-airlock-redis`, `secrets: {redis: redis-creds-connection}`
 
 `enabled`:: Whether the `ManagedResource` is generated for the instance.
 
 `sourceNamespace`:: The namespace that contains the source secrets.
 
-`secrets`:: A map of the secrets to create in the instance namespace.
-The map key is the name of the secret in the instance namespace.
-Each entry has an optional `type` (default `Opaque`) and one entry per data key in the created secret.
-The data key maps to a `secretName` and `key` that select the value from a source secret.
-Set a secret to `null` to disable creating it.
-The `ManagedResource` aborts reconciliation if a referenced source secret does not exist or is being deleted.
-The defaults create `redis-password`, `redis-ca` and `redis-clientcert`.
-Add more entries with the same data mapping to create additional secret names, for example to switch an instance to new redis secret names without downtime.
+`secrets`:: A map from a target prefix to the name of one source secret in `sourceNamespace`.
+Each entry creates three secrets in the instance namespace: `<prefix>-password` with `redis.password` from `REDIS_PASSWORD`, `<prefix>-ca` with `ca.crt` from `ca.crt`, and `<prefix>-clientcert` of type `kubernetes.io/tls` with `tls.crt` and `tls.key` from the same keys.
+The source secret must contain all four keys.
+Set a prefix to `null` to remove that set, or set `secrets: null` to remove all sets.
+An empty map leaves the defaults unchanged.
+If no sets remain, no `ManagedResource` or RBAC resources are generated.
+The `ManagedResource` aborts reconciliation if a source secret does not exist, is being deleted, or lacks a required key.
+The default creates `redis-password`, `redis-ca` and `redis-clientcert` from `redis-creds-connection`.
+Add another prefix to switch an instance to new redis secret names without downtime.
 
 == Example
 
@@ -157,21 +158,7 @@ instances:
       enabled: true
       sourceNamespace: vshn-airlock-redis
       secrets:
-        redis-password:
-          redis.password:
-            secretName: redis-creds-connection
-            key: REDIS_PASSWORD
-        redis-password-old:
-          redis.password:
-            secretName: redis-creds-connection-rotated
-            key: REDIS_PASSWORD
-        redis-ca: null
-        redis-clientcert:
-          type: kubernetes.io/tls
-          tls.crt:
-            secretName: redis-creds-connection
-            key: tls.crt
-          tls.key:
-            secretName: redis-creds-connection
-            key: tls.key
+        redis: redis-creds-connection
+        redis-old: redis-creds-connection-old
+        redis-unused: null
 ----

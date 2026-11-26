@@ -1,0 +1,32 @@
+# Seamless switch case for test-instance-02: two complete redis secret sources.
+# The default prefix reads the current source, redis-old reads the previous one.
+triggers:
+  - {}
+context:
+  - name: source_secret_0
+    resources:
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: redis-creds-connection
+          namespace: vshn-airlock-redis
+        data:
+          REDIS_PASSWORD: cGFzc3dvcmQ=
+          ca.crt: Y2E=
+          tls.crt: Y3J0
+          tls.key: a2V5
+        type: Opaque
+  - name: source_secret_1
+    resources:
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: redis-creds-connection-old
+          namespace: vshn-airlock-redis
+        data:
+          REDIS_PASSWORD: b2xkcGFzc3dvcmQ=
+          ca.crt: b2xkY2E=
+          tls.crt: b2xkY3J0
+          tls.key: b2xka2V5
+        type: Opaque
+libraries: {}
