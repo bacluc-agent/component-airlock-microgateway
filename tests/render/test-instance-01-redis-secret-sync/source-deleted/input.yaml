@@ -1,0 +1,19 @@
+# Error case: the source secret is being deleted and must count as missing.
+triggers:
+  - {}
+context:
+  - name: source_secret_0
+    resources:
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: redis-creds-connection
+          namespace: vshn-airlock-redis
+          deletionTimestamp: "2026-11-26T00:00:00Z"
+        data:
+          REDIS_PASSWORD: cGFzc3dvcmQ=
+          ca.crt: Y2E=
+          tls.crt: Y3J0
+          tls.key: a2V5
+        type: Opaque
+libraries: {}

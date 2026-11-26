@@ -1,0 +1,7 @@
+# Error case: the source secret does not exist in the source namespace.
+triggers:
+  - {}
+context:
+  - name: source_secret_0
+    resources: []
+libraries: {}

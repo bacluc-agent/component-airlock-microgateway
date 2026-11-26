@@ -166,10 +166,10 @@ local instanceResources = std.flatMap(
       resource('sessionHandling', gw.SessionHandling, instance.key),
       resource('redisProvider', gw.RedisProvider, instance.key),
     ] + (if has_cilium then [
-      GatewayCNPIngress(instance.key),
-      GatewayCNPEgress(instance.key),
-    ] else [])
-           + redisSecretSync.resources(instance.key),
+           GatewayCNPIngress(instance.key),
+           GatewayCNPEgress(instance.key),
+         ] else [])
+    + redisSecretSync.resources(instance.key),
   std.objectKeysValues(params.instances)
 );
 

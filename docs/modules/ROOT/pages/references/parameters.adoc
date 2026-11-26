@@ -143,6 +143,7 @@ The map key is the name of the secret in the instance namespace.
 Each entry has an optional `type` (default `Opaque`) and one entry per data key in the created secret.
 The data key maps to a `secretName` and `key` that select the value from a source secret.
 Set a secret to `null` to disable creating it.
+The `ManagedResource` aborts reconciliation if a referenced source secret does not exist or is being deleted.
 The defaults create `redis-password`, `redis-ca` and `redis-clientcert`.
 Add more entries with the same data mapping to create additional secret names, for example to switch an instance to new redis secret names without downtime.
 

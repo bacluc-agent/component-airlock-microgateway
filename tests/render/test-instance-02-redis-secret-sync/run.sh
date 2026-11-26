@@ -23,15 +23,32 @@ shopt -u nullglob
 
 FAILED=0
 TMP="$(mktemp)"
-trap 'rm -f "$TMP"' EXIT
+TMP_ERR="$(mktemp)"
+trap 'rm -f "$TMP" "$TMP_ERR"' EXIT
 
 for input in "${INPUTS[@]}"; do
   REL="${input#"$HERE"/}"
   CASE="${input#"$ROOT"/}"
-  OUTPUT="${REL%/input.yaml}/output.yaml"
-  echo "==> $DIR: ${REL%/input.yaml}"
-  if ! $ESPEJOTE_CMD render "$MANIFEST" --input "$CASE" >"$TMP"; then
+  CASE_DIR="${REL%/input.yaml}"
+  OUTPUT="$CASE_DIR/output.yaml"
+  echo "==> $DIR: $CASE_DIR"
+  if ! $ESPEJOTE_CMD render "$MANIFEST" --input "$CASE" >"$TMP" 2>"$TMP_ERR"; then
+    echo "FAIL: render command failed for $CASE" >&2
+    cat "$TMP_ERR" >&2
+    FAILED=1
+    continue
+  fi
+  if [ -s "$TMP_ERR" ]; then
+    if [ -f "$HERE/$CASE_DIR/error.txt" ] && grep -qF "$(cat "$HERE/$CASE_DIR/error.txt")" "$TMP_ERR"; then
+      continue
+    fi
     echo "FAIL: render failed for $CASE" >&2
+    cat "$TMP_ERR" >&2
+    FAILED=1
+    continue
+  fi
+  if [ -f "$HERE/$CASE_DIR/error.txt" ]; then
+    echo "FAIL: render succeeded for $CASE but an error was expected" >&2
     FAILED=1
     continue
   fi

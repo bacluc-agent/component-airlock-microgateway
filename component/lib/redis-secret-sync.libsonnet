@@ -123,10 +123,18 @@ local sourceRefs(cfg) = [
   for name in sourceSecretNames(cfg)
 ];
 
+local sourceSecret(cfg, source) = std.join('\n', [
+  'local %s =' % source.context,
+  '  local sources = context.%s;' % source.context,
+  "  assert std.length(sources) == 1 : 'Expected exactly one secret %s in namespace %s';" % [ source.name, cfg.sourceNamespace ],
+  "  assert !inDelete(sources[0]) : 'Secret %s in namespace %s is being deleted';" % [ source.name, cfg.sourceNamespace ],
+  '  sources[0];',
+]);
+
 local secret(cfg, name, targetNamespace) =
   local target = secretsOf(cfg)[name];
   local dataEntries = [
-    '%s: context.%s[0].data[%s]' % [
+    '%s: %s.data[%s]' % [
       std.manifestJson(key),
       sourceContextName(cfg, target[key].secretName),
       std.manifestJson(target[key].key),
@@ -162,12 +170,17 @@ local template(cfg, name) = |||
 
   local context = esp.context();
   local managedBy = { 'espejote.io/managed-by': '%(managedBy)s' };
-
+  local inDelete(obj) = std.get(obj.metadata, 'deletionTimestamp', '') != '';
+  %(sources)s
   [
   %(secrets)s
   ]
 ||| % {
   managedBy: '%s.redis-secret-sync' % name,
+  sources: std.join('\n', [
+    sourceSecret(cfg, source)
+    for source in sourceRefs(cfg)
+  ]),
   secrets: std.join('', [
     secret(cfg, secretName, name)
     for secretName in secretNames(cfg)
