@@ -12,17 +12,18 @@ spec:
         - alert: AirlockMicrogatewayEspejoteReconcileFailing
           annotations:
             description: 'The ManagedResource {{ $labels.managedresource }} in namespace
-              {{ $labels.namespace }} has not been Ready for 30 minutes. Last reported
-              status: {{ $labels.status }}. The full error message is in the ManagedResource
-              events: kubectl -n {{ $labels.namespace }} describe managedresource
-              {{ $labels.managedresource }}'
+              {{ $labels.namespace }} has not been Ready for 30 minutes. Check the
+              status and events for the error: kubectl -n {{ $labels.namespace }}
+              describe managedresource {{ $labels.managedresource }}'
             summary: espejote failed to reconcile ManagedResource {{ $labels.managedresource
               }} in namespace {{ $labels.namespace }}
           expr: |
-            label_replace(
-              espejote_managedresource_status{status!="Ready", exported_namespace=~"airlock-microgateway-monitoring|test-instance-01|test-instance-02"},
-              "namespace", "$1", "exported_namespace", "(.*)"
-            ) == 1
+            max by (managedresource, namespace) (
+              label_replace(
+                espejote_managedresource_status{status!="Ready", exported_namespace=~"airlock-microgateway-monitoring|test-instance-01|test-instance-02"},
+                "namespace", "$1", "exported_namespace", "(.*)"
+              ) == 1
+            )
           for: 30m
           labels:
             severity: warning
