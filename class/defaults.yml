@@ -26,6 +26,8 @@ parameters:
         enabled: false
       blackboxExporter:
         enabled: false
+      espejoteReconcileErrors:
+        enabled: true
       dummyBackend:
         enabled: false
         nodeSelector: {}

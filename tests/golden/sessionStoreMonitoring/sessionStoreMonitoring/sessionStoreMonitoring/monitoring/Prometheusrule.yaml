@@ -7,6 +7,26 @@ metadata:
   namespace: airlock-microgateway-monitoring
 spec:
   groups:
+    - name: espejote
+      rules:
+        - alert: AirlockMicrogatewayEspejoteReconcileFailing
+          annotations:
+            description: 'The ManagedResource {{ $labels.managedresource }} in namespace
+              {{ $labels.namespace }} has status {{ $labels.status }} for 30 minutes.
+              The error message is in the ManagedResource events: kubectl -n {{ $labels.namespace
+              }} describe managedresource {{ $labels.managedresource }}'
+            summary: espejote failed to reconcile ManagedResource {{ $labels.managedresource
+              }} in namespace {{ $labels.namespace }}
+          expr: |
+            label_replace(
+              espejote_managedresource_status{status!="Ready", exported_namespace=~"airlock-microgateway-monitoring|test-instance-01|test-instance-02"},
+              "namespace", "$1", "exported_namespace", "(.*)"
+            ) == 1
+          for: 30m
+          labels:
+            severity: warning
+            syn: 'true'
+            syn_component: sessionStoreMonitoring
     - name: sessionMonitoring
       rules:
         - alert: AirlockMicrogatewaySessionConnectionMonitoring
