@@ -154,6 +154,13 @@ local resource(field, generator, name) =
     if has(params.instances[name], field) then params.instances[name][field] else {}
   );
 
+local redisProviderFor(name) =
+  resource('redisProvider', gw.RedisProvider, name) {
+    metadata+: {
+      annotations+: redisSecretSync.redisProviderAnnotations(name),
+    },
+  };
+
 // All per-instance resources, generated in an instance-outer loop
 local instanceResources = std.flatMap(
   function(instance)
@@ -164,12 +171,12 @@ local instanceResources = std.flatMap(
       resource('pdb', pdb, instance.key),
       resource('egressNetpol', egressNetpol, instance.key),
       resource('sessionHandling', gw.SessionHandling, instance.key),
-      resource('redisProvider', gw.RedisProvider, instance.key),
+      redisProviderFor(instance.key),
     ] + (if has_cilium then [
            GatewayCNPIngress(instance.key),
            GatewayCNPEgress(instance.key),
          ] else [])
-    + redisSecretSync.resources(instance.key),
+    + redisSecretSync.resources(instance.key, redisProviderFor(instance.key)),
   std.objectKeysValues(params.instances)
 );
 

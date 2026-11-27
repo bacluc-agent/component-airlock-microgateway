@@ -278,6 +278,9 @@ data:
       secrets:
         redis: "redis-creds-connection"
       sourceNamespace: "vshn-airlock-redis"
+      updateRedisProvider:
+        host: true
+        username: true
     sessionHandling:
       spec:
         auth:

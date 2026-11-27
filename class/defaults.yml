@@ -44,6 +44,9 @@ parameters:
       redisSecretSync:
         enabled: false
         sourceNamespace: vshn-airlock-redis
+        updateRedisProvider:
+          host: true
+          username: true
         secrets:
           redis: redis-creds-connection
       gateway: {}
