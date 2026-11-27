@@ -26,6 +26,8 @@ parameters:
         enabled: false
       blackboxExporter:
         enabled: false
+      espejoteReconcileErrors:
+        enabled: true
       dummyBackend:
         enabled: false
         nodeSelector: {}
@@ -44,6 +46,9 @@ parameters:
       redisSecretSync:
         enabled: false
         sourceNamespace: vshn-airlock-redis
+        updateRedisProvider:
+          host: true
+          username: true
         secrets:
           redis: redis-creds-connection
       gateway: {}

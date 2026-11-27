@@ -43,6 +43,7 @@ COMMODORE_CMD  ?= $(DOCKER_CMD) $(DOCKER_ARGS) $(git_volume) $(root_volume) dock
 COMPILE_CMD    ?= $(COMMODORE_CMD) component compile . $(commodore_args)
 JB_CMD         ?= $(DOCKER_CMD) $(DOCKER_ARGS) --entrypoint /usr/local/bin/jb docker.io/projectsyn/commodore:latest install
 
+# renovate: datasource=docker depName=ghcr.io/vshn/espejote
 ESPEJOTE_VERSION ?= v0.22.0
 ESPEJOTE_IMAGE   ?= ghcr.io/vshn/espejote:$(ESPEJOTE_VERSION)
 ESPEJOTE_CMD     ?= $(DOCKER_CMD) $(DOCKER_ARGS) $(root_volume) --entrypoint=/usr/bin/espejote $(ESPEJOTE_IMAGE)

@@ -2,10 +2,17 @@ apiVersion: microgateway.airlock.com/v1alpha1
 kind: RedisProvider
 metadata:
   annotations:
+    argocd.argoproj.io/ignore-differences: |-
+      jsonPointers:
+      - /spec/mode/standalone/host
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
   name: test-instance-02
   namespace: test-instance-02
 spec:
+  auth:
+    password:
+      secretRef:
+        name: redis-password
   tls:
     clientCertificate:
       secretRef:

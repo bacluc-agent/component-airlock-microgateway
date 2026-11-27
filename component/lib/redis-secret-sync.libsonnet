@@ -12,7 +12,17 @@ local config(name) = std.mergePatch(
   instanceConfig(name)
 );
 
-local requiredKeys = [ 'REDIS_PASSWORD', 'ca.crt', 'tls.crt', 'tls.key' ];
+local updateRedisProvider(cfg) = cfg.updateRedisProvider;
+local updateHost(cfg) = updateRedisProvider(cfg).host;
+local updateUsername(cfg) = updateRedisProvider(cfg).username;
+local manageRedisProvider(cfg) = updateHost(cfg) || updateUsername(cfg);
+
+local baseRequiredKeys = [ 'REDIS_PASSWORD', 'ca.crt', 'tls.crt', 'tls.key' ];
+
+local requiredKeys(cfg) =
+  baseRequiredKeys + (
+    if manageRedisProvider(cfg) then [ 'REDIS_HOST', 'REDIS_USERNAME' ] else []
+  );
 
 local secretsOf(cfg) = if std.get(cfg, 'secrets', null) == null then {} else cfg.secrets;
 
@@ -52,7 +62,12 @@ local targets(cfg) = [
       name: '%s-password' % entry.prefix,
       source: entry.source,
       type: 'Opaque',
-      data: { 'redis.password': 'REDIS_PASSWORD' },
+      data: { 'redis.password': 'REDIS_PASSWORD' } + (
+        if manageRedisProvider(cfg) then {
+          REDIS_HOST: 'REDIS_HOST',
+          REDIS_USERNAME: 'REDIS_USERNAME',
+        } else {}
+      ),
     },
     {
       name: '%s-ca' % entry.prefix,
@@ -122,7 +137,7 @@ local sourceRole(sourceNamespace, roleName) = {
   ],
 };
 
-local targetRole(name, roleName) = {
+local targetRole(name, roleName, manage) = {
   apiVersion: 'rbac.authorization.k8s.io/v1',
   kind: 'Role',
   metadata: {
@@ -143,7 +158,21 @@ local targetRole(name, roleName) = {
         'watch',
       ],
     },
-  ],
+  ] + (
+    if manage then [
+      {
+        apiGroups: [ 'microgateway.airlock.com' ],
+        resources: [ 'redisproviders' ],
+        verbs: [
+          'get',
+          'list',
+          'patch',
+          'update',
+          'watch',
+        ],
+      },
+    ] else []
+  ),
 };
 
 local sourceSecret(cfg, source) = |||
@@ -157,7 +186,7 @@ local sourceSecret(cfg, source) = |||
   context: source.context,
   one: std.manifestJson('Expected exactly one secret %s in namespace %s' % [ source.name, cfg.sourceNamespace ]),
   deleting: std.manifestJson('Secret %s in namespace %s is being deleted' % [ source.name, cfg.sourceNamespace ]),
-  keys: std.manifestJson('Secret %s in namespace %s must contain keys %s' % [ source.name, cfg.sourceNamespace, std.join(', ', requiredKeys) ]),
+  keys: std.manifestJson('Secret %s in namespace %s must contain keys %s' % [ source.name, cfg.sourceNamespace, std.join(', ', requiredKeys(cfg)) ]),
 };
 
 local secret(cfg, target, targetNamespace) =
@@ -190,7 +219,74 @@ local secret(cfg, target, targetNamespace) =
     type: std.manifestJson(target.type),
   };
 
-local template(cfg, name) = |||
+local targetNames(cfg) = [ target.name for target in targets(cfg) ];
+
+local providerAnnotations(cfg) =
+  local pointers = (
+    if updateHost(cfg) then [ '/spec/mode/standalone/host' ] else []
+  ) + (
+    if updateUsername(cfg) then [ '/spec/auth/username' ] else []
+  );
+  if std.get(cfg, 'enabled', false) && std.length(entries(cfg)) > 0 && std.length(pointers) > 0 then {
+    'argocd.argoproj.io/ignore-differences': 'jsonPointers:\n%s' % std.join('\n', [
+      '- %s' % pointer
+      for pointer in pointers
+    ]),
+  } else {};
+
+local redisProviderName(redisProvider) =
+  std.get(std.get(redisProvider, 'metadata', {}), 'name', '');
+
+local redisProviderApiVersion(redisProvider) =
+  std.get(redisProvider, 'apiVersion', 'microgateway.airlock.com/v1alpha1');
+
+local redisProviderAuthSecretName(redisProvider) =
+  local auth = std.get(std.get(redisProvider, 'spec', {}), 'auth', {});
+  local password = std.get(auth, 'password', {});
+  local secretRef = std.get(password, 'secretRef', {});
+  std.get(secretRef, 'name', '');
+
+local providerSecretValueExpression(key, indent) =
+  local message = 'The secret referenced by the RedisProvider has no non-empty key %s' % key;
+  std.join('\n', [
+    'assert std.objectHas(redisProviderSecret.data, %s) : %s;' % [ std.manifestJson(key), std.manifestJson(message) ],
+    '%slocal value = std.base64Decode(redisProviderSecret.data[%s]);' % [ indent, std.manifestJson(key) ],
+    '%sassert std.length(value) > 0 : %s;' % [ indent, std.manifestJson(message) ],
+    '%svalue' % indent,
+  ]);
+
+local redisProviderPatch(cfg, name, redisProvider) =
+  local fields = (
+    if updateUsername(cfg) then [
+      '        auth: {',
+      '          username: %s,' % providerSecretValueExpression('REDIS_USERNAME', '            '),
+      '        },',
+    ] else []
+  ) + (
+    if updateHost(cfg) then [
+      '        mode: {',
+      '          standalone: {',
+      '            host: %s,' % providerSecretValueExpression('REDIS_HOST', '              '),
+      '          },',
+      '        },',
+    ] else []
+  );
+  std.join('\n', [
+    '    local redisProviderSecret = context.redis_provider_secret[0];',
+    '    {',
+    '      apiVersion: %s,' % std.manifestJson(redisProviderApiVersion(redisProvider)),
+    "      kind: 'RedisProvider',",
+    '      metadata: {',
+    '        name: %s,' % std.manifestJson(redisProviderName(redisProvider)),
+    '        namespace: %s,' % std.manifestJson(name),
+    '      },',
+    '      spec: {',
+  ] + fields + [
+    '      },',
+    '    }',
+  ]);
+
+local template(cfg, name, redisProvider) = |||
   local esp = import 'espejote.libsonnet';
 
   local context = esp.context();
@@ -200,10 +296,10 @@ local template(cfg, name) = |||
   %(sources)s
   [
   %(secrets)s
-  ]
+  ]%(redisProvider)s
 ||| % {
   managedBy: '%s.redis-secret-sync' % name,
-  requiredKeys: std.manifestJson(requiredKeys),
+  requiredKeys: std.manifestJson(requiredKeys(cfg)),
   sources: std.join('\n', [
     sourceSecret(cfg, source)
     for source in sourceRefs(cfg)
@@ -212,20 +308,68 @@ local template(cfg, name) = |||
     secret(cfg, target, name)
     for target in targets(cfg)
   ]),
+  redisProvider: if manageRedisProvider(cfg) then
+    '\n  + (if std.length(context.redis_provider) == 1 && std.length(context.redis_provider_secret) == 1 then [\n%s\n  ] else [])' % redisProviderPatch(cfg, name, redisProvider)
+  else '',
 };
 
-local managedResource(name) =
+local validRedisProvider(name, redisProvider) =
+  local cfg = config(name);
+  assert !manageRedisProvider(cfg) || redisProviderName(redisProvider) != '' : 'redisSecretSync requires the RedisProvider to have a name';
+  assert !manageRedisProvider(cfg) || redisProviderAuthSecretName(redisProvider) != '' : 'redisSecretSync requires the RedisProvider to set spec.auth.password.secretRef.name';
+  true;
+
+local managedResource(name, redisProvider) =
   local cfg = config(name);
   local serviceAccountName = name + '-redis-secret-sync';
   local sources = sourceRefs(cfg);
+  local authSecretName = redisProviderAuthSecretName(redisProvider);
+  local syncsProviderSecret = std.member(targetNames(cfg), authSecretName);
+  local providerContext = {
+    name: 'redis_provider',
+    resource: {
+      apiVersion: redisProviderApiVersion(redisProvider),
+      kind: 'RedisProvider',
+      name: redisProviderName(redisProvider),
+      namespace: name,
+    },
+  };
+  local providerSecretContext = {
+    name: 'redis_provider_secret',
+    resource: {
+      apiVersion: 'v1',
+      kind: 'Secret',
+      name: authSecretName,
+      namespace: name,
+    },
+  };
+  local providerTrigger = {
+    name: 'redis_provider',
+    watchResource: {
+      apiVersion: redisProviderApiVersion(redisProvider),
+      kind: 'RedisProvider',
+      name: redisProviderName(redisProvider),
+      namespace: name,
+    },
+  };
+  local providerSecretTrigger = {
+    name: 'redis_provider_secret',
+    watchContextResource: {
+      name: 'redis_provider_secret',
+    },
+  };
   {
     apiVersion: 'espejote.io/v1alpha1',
     kind: 'ManagedResource',
     metadata: {
       name: 'redis-secret-sync',
       namespace: name,
+      labels: {
+        'app.kubernetes.io/name': 'redis-secret-sync',
+        'app.kubernetes.io/part-of': 'airlock-microgateway',
+      },
       annotations: {
-        description: 'Copies the redis connection secrets into the airlock-microgateway instance namespace',
+        description: 'Copies the redis connection secrets into the airlock-microgateway instance namespace and updates the RedisProvider host and username',
       },
     },
     spec: {
@@ -243,7 +387,9 @@ local managedResource(name) =
           },
         }
         for source in sources
-      ],
+      ] + (
+        if manageRedisProvider(cfg) then [ providerContext, providerSecretContext ] else []
+      ),
       triggers:
         [
           {
@@ -267,24 +413,30 @@ local managedResource(name) =
               },
             },
           },
-        ],
-      template: template(cfg, name),
+        ] + (
+          if manageRedisProvider(cfg) then [ providerTrigger ] + (
+            if syncsProviderSecret then [] else [ providerSecretTrigger ]
+          ) else []
+        ),
+      template: template(cfg, name, redisProvider),
     },
   };
 
 {
-  resources(name):
+  redisProviderAnnotations(name): providerAnnotations(config(name)),
+  resources(name, redisProvider):
     local cfg = config(name);
-    if !std.get(cfg, 'enabled', false) || std.length(entries(cfg)) == 0 then []
-    else
+    local enabled = std.get(cfg, 'enabled', false);
+    if enabled && std.length(entries(cfg)) > 0 && validRedisProvider(name, redisProvider) then
       local serviceAccountName = name + '-redis-secret-sync';
       local sourceRoleName = serviceAccountName + '-source';
       [
         serviceAccount(name, serviceAccountName),
         sourceRole(cfg.sourceNamespace, sourceRoleName),
         roleBinding(name, cfg.sourceNamespace, sourceRoleName, serviceAccountName),
-        targetRole(name, serviceAccountName),
+        targetRole(name, serviceAccountName, manageRedisProvider(cfg)),
         roleBinding(name, name, serviceAccountName, serviceAccountName),
-        managedResource(name),
-      ],
+        managedResource(name, redisProvider),
+      ]
+    else [],
 }

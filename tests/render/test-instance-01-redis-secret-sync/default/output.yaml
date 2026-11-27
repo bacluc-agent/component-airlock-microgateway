@@ -1,6 +1,8 @@
 ---
 - apiVersion: v1
   data:
+    REDIS_HOST: cmVkaXMtbWFzdGVyLmV4YW1wbGU=
+    REDIS_USERNAME: ZGVmYXVsdA==
     redis.password: cGFzc3dvcmQ=
   kind: Secret
   metadata:
@@ -30,3 +32,14 @@
     name: redis-clientcert
     namespace: test-instance-01
   type: kubernetes.io/tls
+- apiVersion: microgateway.airlock.com/v1alpha1
+  kind: RedisProvider
+  metadata:
+    name: test-instance-01
+    namespace: test-instance-01
+  spec:
+    auth:
+      username: default
+    mode:
+      standalone:
+        host: redis-master.example

@@ -209,9 +209,44 @@ local httpRoutes = {
   for instance in com.generateResources(params.httpRoutes, httpRoute)
 };
 
+local instanceNamespaces = std.objectFields(inv.parameters.airlock_microgateway.instances);
+local monitoredNamespaces = std.set(instanceNamespaces + [ nsName ]);
+local namespacePattern = std.join('|', monitoredNamespaces);
+
+local espejoteNotReady =
+  'label_replace(espejote_managedresource_status{status!="Ready", exported_namespace=~"%s"}, "namespace", "$1", "exported_namespace", "(.*)")' % namespacePattern;
+
+local espejoteReconcileErrorsRules = {
+  espejote: {
+    'alert:AirlockMicrogatewayEspejoteReconcileFailing': {
+      annotations: {
+        summary: 'espejote failed to reconcile ManagedResource {{ $labels.managedresource }} in namespace {{ $labels.namespace }}',
+        description: 'The ManagedResource {{ $labels.managedresource }} in namespace {{ $labels.namespace }} has not been Ready for 30 minutes. Last reported status: {{ $labels.status }}. The full error message is in the ManagedResource events: kubectl -n {{ $labels.namespace }} describe managedresource {{ $labels.managedresource }}',
+      },
+      expr: |||
+        max by (managedresource, namespace, status) (
+          %(notReady)s
+        )
+        and on (managedresource, namespace)
+        (
+          count_over_time((
+            max by (managedresource, namespace) (
+              %(notReady)s
+            )
+          )[31m:1m]) >= 31
+        )
+      ||| % { notReady: espejoteNotReady },
+      labels: {
+        severity: 'warning',
+      },
+    },
+  },
+};
+
 local promRules = {}
                   + (if params.sessionMonitoring.enabled then params.sessionMonitoring.rules else {})
-                  + (if params.blackboxExporter.enabled then params.blackboxExporter.rules else {});
+                  + (if params.blackboxExporter.enabled then params.blackboxExporter.rules else {})
+                  + (if params.espejoteReconcileErrors.enabled then espejoteReconcileErrorsRules else {});
 
 local prometheusRule = prom.generateRules('airlock-microgateway-rules', promRules) {
   metadata+: {

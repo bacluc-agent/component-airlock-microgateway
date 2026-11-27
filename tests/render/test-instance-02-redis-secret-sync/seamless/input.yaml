@@ -12,6 +12,8 @@ context:
           namespace: vshn-airlock-redis
         data:
           REDIS_PASSWORD: cGFzc3dvcmQ=
+          REDIS_HOST: cmVkaXMtbWFzdGVyLmV4YW1wbGU=
+          REDIS_USERNAME: ZGVmYXVsdA==
           ca.crt: Y2E=
           tls.crt: Y3J0
           tls.key: a2V5
@@ -25,8 +27,34 @@ context:
           namespace: vshn-airlock-redis
         data:
           REDIS_PASSWORD: b2xkcGFzc3dvcmQ=
+          REDIS_HOST: cmVkaXMtbWFzdGVyLmV4YW1wbGU=
+          REDIS_USERNAME: ZGVmYXVsdA==
           ca.crt: b2xkY2E=
           tls.crt: b2xkY3J0
           tls.key: b2xka2V5
+        type: Opaque
+  - name: redis_provider
+    resources:
+      - apiVersion: microgateway.airlock.com/v1alpha1
+        kind: RedisProvider
+        metadata:
+          name: test-instance-02
+          namespace: test-instance-02
+        spec:
+          auth:
+            password:
+              secretRef:
+                name: redis-password
+  - name: redis_provider_secret
+    resources:
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: redis-password
+          namespace: test-instance-02
+        data:
+          redis.password: cGFzc3dvcmQ=
+          REDIS_HOST: cmVkaXMtbWFzdGVyLmV4YW1wbGU=
+          REDIS_USERNAME: ZGVmYXVsdA==
         type: Opaque
 libraries: {}

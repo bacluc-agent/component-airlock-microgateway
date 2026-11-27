@@ -354,6 +354,9 @@ data:
       secrets:
         redis: "redis-creds-connection"
       sourceNamespace: "vshn-airlock-redis"
+      updateRedisProvider:
+        host: true
+        username: true
     sessionHandling:
       metadata:
         name: "redis-session"
