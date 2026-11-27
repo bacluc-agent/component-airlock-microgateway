@@ -209,9 +209,43 @@ local httpRoutes = {
   for instance in com.generateResources(params.httpRoutes, httpRoute)
 };
 
+local instanceNamespaces = std.objectFields(inv.parameters.airlock_microgateway.instances);
+local monitoredNamespaces = std.set(instanceNamespaces + [ nsName ]);
+local namespacePattern = std.join('|', monitoredNamespaces);
+
+local espejoteNotReady =
+  'label_replace(espejote_managedresource_status{status!="Ready", exported_namespace=~"%s"}, "namespace", "$1", "exported_namespace", "(.*)")' % namespacePattern;
+
+local espejoteReconcileErrorsRules = {
+  espejote: {
+    'alert:AirlockMicrogatewayEspejoteReconcileFailing': {
+      annotations: params.espejoteReconcileErrors.annotations,
+      expr: |||
+        max by (managedresource, namespace, status) (
+          %(notReady)s
+        )
+        and on (managedresource, namespace)
+        (
+          count_over_time((
+            max by (managedresource, namespace) (
+              %(notReady)s
+            )
+          )[%(minutesThreshold)sm:1m]) >= %(minutesThreshold)s
+        )
+      ||| % {
+        notReady: espejoteNotReady,
+        minutesThreshold: params.espejoteReconcileErrors.minutesThreshold,
+      },
+      "for": params.espejoteReconcileErrors["for"],
+      labels: params.espejoteReconcileErrors.labels,
+    },
+  },
+};
+
 local promRules = {}
                   + (if params.sessionMonitoring.enabled then params.sessionMonitoring.rules else {})
-                  + (if params.blackboxExporter.enabled then params.blackboxExporter.rules else {});
+                  + (if params.blackboxExporter.enabled then params.blackboxExporter.rules else {})
+                  + (if params.espejoteReconcileErrors.enabled then espejoteReconcileErrorsRules else {});
 
 local prometheusRule = prom.generateRules('airlock-microgateway-rules', promRules) {
   metadata+: {

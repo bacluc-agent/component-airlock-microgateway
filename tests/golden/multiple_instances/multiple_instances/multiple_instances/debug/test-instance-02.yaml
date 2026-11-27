@@ -276,23 +276,11 @@ data:
     redisSecretSync:
       enabled: false
       secrets:
-        redis-ca:
-          ca.crt:
-            key: "ca.crt"
-            secretName: "redis-creds-connection"
-        redis-clientcert:
-          tls.crt:
-            key: "tls.crt"
-            secretName: "redis-creds-connection"
-          tls.key:
-            key: "tls.key"
-            secretName: "redis-creds-connection"
-          type: "kubernetes.io/tls"
-        redis-password:
-          redis.password:
-            key: "REDIS_PASSWORD"
-            secretName: "redis-creds-connection"
+        redis: "redis-creds-connection"
       sourceNamespace: "vshn-airlock-redis"
+      updateRedisProvider:
+        host: true
+        username: true
     sessionHandling:
       spec:
         auth:
