@@ -236,7 +236,7 @@ local espejoteReconcileErrorsRules = {
         notReady: espejoteNotReady,
         minutesThreshold: params.espejoteReconcileErrors.minutesThreshold,
       },
-      "for": params.espejoteReconcileErrors["for"],
+      'for': params.espejoteReconcileErrors['for'],
       labels: params.espejoteReconcileErrors.labels,
     },
   },
