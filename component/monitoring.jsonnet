@@ -218,7 +218,7 @@ local espejoteReconcileErrorsRules = {
     'alert:AirlockMicrogatewayEspejoteReconcileFailing': {
       annotations: {
         summary: 'espejote failed to reconcile ManagedResource {{ $labels.managedresource }} in namespace {{ $labels.namespace }}',
-        description: 'The ManagedResource {{ $labels.managedresource }} in namespace {{ $labels.namespace }} has status {{ $labels.status }} for 30 minutes. The error message is in the ManagedResource events: kubectl -n {{ $labels.namespace }} describe managedresource {{ $labels.managedresource }}',
+        description: 'The ManagedResource {{ $labels.managedresource }} in namespace {{ $labels.namespace }} has not been Ready for 30 minutes. Last reported status: {{ $labels.status }}. The full error message is in the ManagedResource events: kubectl -n {{ $labels.namespace }} describe managedresource {{ $labels.managedresource }}',
       },
       expr: |||
         label_replace(
