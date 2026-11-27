@@ -1,0 +1,1 @@
+Expected exactly one secret redis-creds-connection in namespace vshn-airlock-redis

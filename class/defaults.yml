@@ -11,7 +11,7 @@ parameters:
       nginx:
         registry: 'ghcr.io'
         repository: 'nginx/nginx-unprivileged'
-        tag: '1.31.2-alpine3.23'
+        tag: '1.31.10-alpine3.24'
 
 
     monitoring:
@@ -26,8 +26,23 @@ parameters:
         enabled: false
       blackboxExporter:
         enabled: false
+      espejoteReconcileErrors:
+        enabled: true
+        minutesThreshold: 31
+        annotations:
+          summary: 'espejote failed to reconcile ManagedResource {{ $labels.managedresource }} in namespace {{ $labels.namespace }}'
+          description: 'The ManagedResource {{ $labels.managedresource }} in namespace {{ $labels.namespace }} has not been Ready for 30 minutes. Last reported status: {{ $labels.status }}. The full error message is in the ManagedResource events: kubectl -n {{ $labels.namespace }} describe managedresource {{ $labels.managedresource }}'
+        labels:
+          severity: 'warning'
+        for: 5m
       dummyBackend:
         enabled: false
+        nodeSelector: {}
+        containers:
+          nginx: {}
+        deployment:
+          metadata: {}
+          spec: {}
         tls:
           enabled: false
     operatorNamespace: ""
@@ -35,6 +50,26 @@ parameters:
       namespace:
         labels: {}
         annotations: {}
+      redisSecretSync:
+        enabled: false
+        sourceNamespace: vshn-airlock-redis
+        secrets:
+          redis-password:
+            redis.password:
+              secretName: redis-creds-connection
+              key: REDIS_PASSWORD
+          redis-ca:
+            ca.crt:
+              secretName: redis-creds-connection
+              key: ca.crt
+          redis-clientcert:
+            type: kubernetes.io/tls
+            tls.crt:
+              secretName: redis-creds-connection
+              key: tls.crt
+            tls.key:
+              secretName: redis-creds-connection
+              key: tls.key
       gateway: {}
       gatewayParameters:
         spec:

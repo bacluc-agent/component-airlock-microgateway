@@ -1,0 +1,19 @@
+# Renders the redis-secret-sync ManagedResource of test-instance-01.
+# The instance uses the default secret sync config with all three secrets.
+triggers:
+  - {}
+context:
+  - name: source_secret_0
+    resources:
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: redis-creds-connection
+          namespace: vshn-airlock-redis
+        data:
+          REDIS_PASSWORD: cGFzc3dvcmQ=
+          ca.crt: Y2E=
+          tls.crt: Y3J0
+          tls.key: a2V5
+        type: Opaque
+libraries: {}

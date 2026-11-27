@@ -71,6 +71,25 @@ parameters:
                 severity: critical
       dummyBackend:
         enabled: true
+        nodeSelector:
+          node-role.kubernetes.io/infra: ""
+        containers:
+          nginx:
+            env:
+              - name: TEST_ENV
+                value: '1'
+        deployment:
+          metadata:
+            labels:
+              test.deployment-label: demo
+          spec:
+            replicas: 2
+            template:
+              spec:
+                tolerations:
+                  - key: node-role.kubernetes.io/infra
+                    operator: Exists
+                    effect: NoSchedule
         tls:
           enabled: true
           secret: nginx-tls

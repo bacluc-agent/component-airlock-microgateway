@@ -1,0 +1,18 @@
+# Error case: one of the two source secrets is missing, so the sync must abort.
+triggers:
+  - {}
+context:
+  - name: source_secret_0
+    resources:
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: redis-auth
+          namespace: vshn-airlock-redis
+        data:
+          REDIS_PASSWORD: cGFzc3dvcmQ=
+          REDIS_USERNAME: dXNlcg==
+        type: Opaque
+  - name: source_secret_1
+    resources: []
+libraries: {}

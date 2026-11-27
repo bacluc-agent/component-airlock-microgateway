@@ -23,6 +23,17 @@
   "suppressNotifications": [
     "artifactErrors"
   ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/.*/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s*[A-Za-z_][A-Za-z0-9_]*\\s*\\??[=:]\\s*\"?(?<currentValue>v?[0-9][\\w.-]*)(@(?<currentDigest>[a-z0-9:]*))?\"?"
+      ]
+    }
+  ],
   "packageRules": [
     {
       "matchUpdateTypes": [

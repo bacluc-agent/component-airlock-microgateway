@@ -1,0 +1,30 @@
+# Update case for test-instance-01: redis-password already exists with the old
+# password, and the source secret now contains a new password.
+triggers:
+  - name: managed_secret
+    watchResource:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: redis-password
+        namespace: test-instance-01
+        labels:
+          espejote.io/managed-by: test-instance-01.redis-secret-sync
+      data:
+        redis.password: b2xkLXBhc3N3b3Jk
+      type: Opaque
+context:
+  - name: source_secret_0
+    resources:
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: redis-creds-connection
+          namespace: vshn-airlock-redis
+        data:
+          REDIS_PASSWORD: bmV3LXBhc3N3b3Jk
+          ca.crt: Y2E=
+          tls.crt: Y3J0
+          tls.key: a2V5
+        type: Opaque
+libraries: {}

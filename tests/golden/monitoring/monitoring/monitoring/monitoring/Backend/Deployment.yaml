@@ -3,11 +3,12 @@ kind: Deployment
 metadata:
   labels:
     app: microgateway-monitoring
+    test.deployment-label: demo
   name: microgateway-canary-backend
   namespace: vshn-airlock-monitoring
 spec:
   minReadySeconds: 30
-  replicas: 1
+  replicas: 2
   revisionHistoryLimit: 10
   selector:
     matchLabels:
@@ -24,7 +25,10 @@ spec:
         app: microgateway-monitoring
     spec:
       containers:
-        - image: test.io/test/test-unprivileged:10
+        - env:
+            - name: TEST_ENV
+              value: '1'
+          image: test.io/test/test-unprivileged:10
           livenessProbe:
             httpGet:
               path: /health
@@ -50,7 +54,13 @@ spec:
               readOnly: true
       imagePullSecrets: []
       initContainers: []
+      nodeSelector:
+        node-role.kubernetes.io/infra: ''
       terminationGracePeriodSeconds: 30
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/infra
+          operator: Exists
       volumes:
         - configMap:
             name: nginx-conf

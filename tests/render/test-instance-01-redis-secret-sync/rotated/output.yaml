@@ -1,0 +1,32 @@
+---
+- apiVersion: v1
+  data:
+    ca.crt: cm90YXRlZC1jYQ==
+  kind: Secret
+  metadata:
+    labels:
+      espejote.io/managed-by: test-instance-01.redis-secret-sync
+    name: redis-ca
+    namespace: test-instance-01
+  type: Opaque
+- apiVersion: v1
+  data:
+    tls.crt: cm90YXRlZC1jcnQ=
+    tls.key: cm90YXRlZC1rZXk=
+  kind: Secret
+  metadata:
+    labels:
+      espejote.io/managed-by: test-instance-01.redis-secret-sync
+    name: redis-clientcert
+    namespace: test-instance-01
+  type: kubernetes.io/tls
+- apiVersion: v1
+  data:
+    redis.password: cm90YXRlZC1wYXNz
+  kind: Secret
+  metadata:
+    labels:
+      espejote.io/managed-by: test-instance-01.redis-secret-sync
+    name: redis-password
+    namespace: test-instance-01
+  type: Opaque

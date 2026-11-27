@@ -1,0 +1,22 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: internal-dns-egress
+  namespace: test-instance-03
+spec:
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            dns.operator.openshift.io/daemonset-dns: default
+            k8s:io.kubernetes.pod.namespace: openshift-dns
+      toPorts:
+        - ports:
+            - port: '5353'
+              protocol: UDP
+          rules:
+            dns:
+              - matchPattern: '*'
+  endpointSelector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: test-instance-03
+      microgateway.airlock.com/managedBy: test-operator-namespace

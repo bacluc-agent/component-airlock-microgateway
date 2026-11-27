@@ -1,0 +1,7 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    gateway.networking.k8s.io/gateway-name: test-instance-03
+  name: test-instance-03
+  namespace: test-instance-03

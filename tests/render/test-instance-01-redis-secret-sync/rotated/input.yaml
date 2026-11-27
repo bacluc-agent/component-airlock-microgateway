@@ -1,0 +1,19 @@
+# Rotated case for test-instance-01: same MR, different secret values.
+# Proves the render consumes the input context (data differs from the default case).
+triggers:
+  - {}
+context:
+  - name: source_secret_0
+    resources:
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: redis-creds-connection
+          namespace: vshn-airlock-redis
+        data:
+          REDIS_PASSWORD: cm90YXRlZC1wYXNz
+          ca.crt: cm90YXRlZC1jYQ==
+          tls.crt: cm90YXRlZC1jcnQ=
+          tls.key: cm90YXRlZC1rZXk=
+        type: Opaque
+libraries: {}
