@@ -139,11 +139,12 @@ default:: `enabled: false`
 `sourceNamespace`:: The namespace that contains the source secrets.
 
 `updateRedisProvider`:: Controls updates to the instance's `RedisProvider`.
-The secret name is taken from the RedisProvider field `spec.auth.password.secretRef.name` and must match one of the secrets managed through `secrets`.
-The host and username are read from the source secret that provides the `redis.password` value of that secret.
-The host is read from key `REDIS_HOST` and the username from key `REDIS_USERNAME`.
+The secret name is taken from the RedisProvider field `spec.auth.password.secretRef.name`.
+The host and username are read from key `REDIS_HOST` and `REDIS_USERNAME` of that secret in the instance namespace.
+The secret may be one of the secrets managed through `secrets`, but it does not have to be.
+The `ManagedResource` watches the secret when it does not create it itself.
 The host is written to `spec.mode.standalone.host` and the username to `spec.auth.username`.
-It assumes that the secret mapping a value to redis.password also has the REDIS_HOST and REDIS_USERNAME keys.
+The defaults add `REDIS_HOST` and `REDIS_USERNAME` to the `redis-password` secret so the keys are available in the instance namespace.
 type:: object
 default:: `host: true, username: true`
 
@@ -163,7 +164,7 @@ The `ManagedResource` aborts reconciliation if a referenced source secret does n
 The defaults create `redis-password`, `redis-ca` and `redis-clientcert`.
 Add more entries with the same data mapping to create additional secret names, for example to switch an instance to new redis secret names without downtime.
 
-The `ManagedResource` reconciles when a source secret or the RedisProvider changes.
+The `ManagedResource` reconciles when a source secret, the RedisProvider, or the secret referenced by the RedisProvider changes.
 To force a reconcile, annotate the `ManagedResource`:
 
 [source,bash]
@@ -196,6 +197,9 @@ instances:
           redis.password:
             secretName: redis-creds-connection
             key: REDIS_PASSWORD
+          REDIS_HOST:
+            secretName: redis-creds-connection
+            key: REDIS_HOST
         redis-password-old:
           redis.password:
             secretName: redis-creds-connection-rotated

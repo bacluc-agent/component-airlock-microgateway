@@ -22,6 +22,8 @@
   type: kubernetes.io/tls
 - apiVersion: v1
   data:
+    REDIS_HOST: cmVkaXMtbWFzdGVyLmV4YW1wbGU=
+    REDIS_USERNAME: ZGVmYXVsdA==
     redis.password: cGFzc3dvcmQ=
   kind: Secret
   metadata:

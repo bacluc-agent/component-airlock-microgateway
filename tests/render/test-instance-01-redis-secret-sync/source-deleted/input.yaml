@@ -20,4 +20,16 @@ context:
         type: Opaque
   - name: redis_provider
     resources: []
+  - name: redis_provider_secret
+    resources:
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: redis-password
+          namespace: test-instance-01
+        data:
+          redis.password: cGFzc3dvcmQ=
+          REDIS_HOST: cmVkaXMtbWFzdGVyLmV4YW1wbGU=
+          REDIS_USERNAME: ZGVmYXVsdA==
+        type: Opaque
 libraries: {}

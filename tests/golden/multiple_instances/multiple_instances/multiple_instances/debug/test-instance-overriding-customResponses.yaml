@@ -309,6 +309,12 @@ data:
             secretName: "redis-creds-connection"
           type: "kubernetes.io/tls"
         redis-password:
+          REDIS_HOST:
+            key: "REDIS_HOST"
+            secretName: "redis-creds-connection"
+          REDIS_USERNAME:
+            key: "REDIS_USERNAME"
+            secretName: "redis-creds-connection"
           redis.password:
             key: "REDIS_PASSWORD"
             secretName: "redis-creds-connection"

@@ -52,6 +52,12 @@ parameters:
             redis.password:
               secretName: redis-creds-connection
               key: REDIS_PASSWORD
+            REDIS_HOST:
+              secretName: redis-creds-connection
+              key: REDIS_HOST
+            REDIS_USERNAME:
+              secretName: redis-creds-connection
+              key: REDIS_USERNAME
           redis-ca:
             ca.crt:
               secretName: redis-creds-connection

@@ -35,6 +35,8 @@
   type: kubernetes.io/tls
 - apiVersion: v1
   data:
+    REDIS_HOST: Y3JhenkuZXhhbXBsZQ==
+    REDIS_USERNAME: dXNlcg==
     redis.password: cGFzc3dvcmQ=
   kind: Secret
   metadata:
@@ -51,4 +53,4 @@
   spec:
     mode:
       standalone:
-        host: crazy.example
+        host: instance.example

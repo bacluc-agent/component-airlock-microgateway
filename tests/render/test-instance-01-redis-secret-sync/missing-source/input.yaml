@@ -6,4 +6,6 @@ context:
     resources: []
   - name: redis_provider
     resources: []
+  - name: redis_provider_secret
+    resources: []
 libraries: {}

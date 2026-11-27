@@ -22,6 +22,8 @@
   type: kubernetes.io/tls
 - apiVersion: v1
   data:
+    REDIS_HOST: cm90YXRlZC5leGFtcGxl
+    REDIS_USERNAME: cm90YXRlZA==
     redis.password: cm90YXRlZC1wYXNz
   kind: Secret
   metadata:
@@ -37,7 +39,7 @@
     namespace: test-instance-01
   spec:
     auth:
-      username: rotated
+      username: instance-rotated
     mode:
       standalone:
-        host: rotated.example
+        host: instance-rotated.example

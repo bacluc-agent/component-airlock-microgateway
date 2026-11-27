@@ -40,4 +40,15 @@ context:
             password:
               secretRef:
                 name: redis-password
+  - name: redis_provider_secret
+    resources:
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: redis-password
+          namespace: test-instance-02
+        data:
+          redis.password: cGFzc3dvcmQ=
+          REDIS_HOST: aW5zdGFuY2UuZXhhbXBsZQ==
+        type: Opaque
 libraries: {}

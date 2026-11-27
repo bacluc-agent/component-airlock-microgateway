@@ -209,44 +209,33 @@ local redisProviderAuthSecretName(redisProvider) =
   local secretRef = std.get(password, 'secretRef', {});
   std.get(secretRef, 'name', '');
 
-// https://docs.airlock.com/microgateway/5.2/technical-reference/crd-reference/microgateway/redis-provider/v1alpha1/#redisproviderspecauthpassword
-local redisPasswordKey = 'redis.password';
-
-local passwordSource(cfg, authSecretName) =
-  local target = std.get(secretsOf(cfg), authSecretName, null);
-  if target == null || !std.objectHas(target, redisPasswordKey) then null
-  else target[redisPasswordKey];
-
-local valueExpression(cfg, source, key, indent) =
-  local context = sourceContextName(cfg, source.secretName);
-  local message = 'Secret %s in namespace %s has no non-empty key %s' % [ source.secretName, cfg.sourceNamespace, key ];
+local providerSecretValueExpression(key, indent) =
+  local message = 'The secret referenced by the RedisProvider has no non-empty key %s' % key;
   std.join('\n', [
-    'assert std.objectHas(%s.data, %s) : %s;' % [ context, std.manifestJson(key), std.manifestJson(message) ],
-    '%slocal value = std.base64Decode(%s.data[%s]);' % [ indent, context, std.manifestJson(key) ],
+    'assert std.objectHas(redisProviderSecret.data, %s) : %s;' % [ std.manifestJson(key), std.manifestJson(message) ],
+    '%slocal value = std.base64Decode(redisProviderSecret.data[%s]);' % [ indent, std.manifestJson(key) ],
     '%sassert std.length(value) > 0 : %s;' % [ indent, std.manifestJson(message) ],
     '%svalue' % indent,
   ]);
 
 local redisProviderPatch(cfg, name, redisProvider) =
-  local source = passwordSource(cfg, redisProviderAuthSecretName(redisProvider));
-  local redisUsernameKeyInSourceSecret = 'REDIS_USERNAME';
-  local redisHostKeyInSourceSecret = 'REDIS_HOST';
   local fields = (
     if updateUsername(cfg) then [
       '        auth: {',
-      '          username: %s,' % valueExpression(cfg, source, redisUsernameKeyInSourceSecret, '            '),
+      '          username: %s,' % providerSecretValueExpression('REDIS_USERNAME', '            '),
       '        },',
     ] else []
   ) + (
     if updateHost(cfg) then [
       '        mode: {',
       '          standalone: {',
-      '            host: %s,' % valueExpression(cfg, source, redisHostKeyInSourceSecret, '              '),
+      '            host: %s,' % providerSecretValueExpression('REDIS_HOST', '              '),
       '          },',
       '        },',
     ] else []
   );
   std.join('\n', [
+    '    local redisProviderSecret = context.redis_provider_secret[0];',
     '    {',
     '      apiVersion: %s,' % std.manifestJson(redisProviderApiVersion(redisProvider)),
     "      kind: 'RedisProvider',",
@@ -281,7 +270,7 @@ local template(cfg, name, redisProvider) = |||
     for secretName in secretNames(cfg)
   ]),
   redisProvider: if manageRedisProvider(cfg) then
-    '\n  + (if std.length(context.redis_provider) == 1 then [\n%s\n  ] else [])' % redisProviderPatch(cfg, name, redisProvider)
+    '\n  + (if std.length(context.redis_provider) == 1 && std.length(context.redis_provider_secret) == 1 then [\n%s\n  ] else [])' % redisProviderPatch(cfg, name, redisProvider)
   else '',
 };
 
@@ -289,12 +278,23 @@ local managedResource(name, redisProvider) =
   local cfg = config(name);
   local serviceAccountName = name + '-redis-secret-sync';
   local sources = sourceRefs(cfg);
+  local authSecretName = redisProviderAuthSecretName(redisProvider);
+  local syncsProviderSecret = std.member(secretNames(cfg), authSecretName);
   local providerContext = {
     name: 'redis_provider',
     resource: {
       apiVersion: redisProviderApiVersion(redisProvider),
       kind: 'RedisProvider',
       name: redisProviderName(redisProvider),
+      namespace: name,
+    },
+  };
+  local providerSecretContext = {
+    name: 'redis_provider_secret',
+    resource: {
+      apiVersion: 'v1',
+      kind: 'Secret',
+      name: authSecretName,
       namespace: name,
     },
   };
@@ -305,6 +305,12 @@ local managedResource(name, redisProvider) =
       kind: 'RedisProvider',
       name: redisProviderName(redisProvider),
       namespace: name,
+    },
+  };
+  local providerSecretTrigger = {
+    name: 'redis_provider_secret',
+    watchContextResource: {
+      name: 'redis_provider_secret',
     },
   };
   {
@@ -333,7 +339,7 @@ local managedResource(name, redisProvider) =
         }
         for source in sources
       ] + (
-        if manageRedisProvider(cfg) then [ providerContext ] else []
+        if manageRedisProvider(cfg) then [ providerContext, providerSecretContext ] else []
       ),
       triggers:
         [
@@ -359,7 +365,9 @@ local managedResource(name, redisProvider) =
             },
           },
         ] + (
-          if manageRedisProvider(cfg) then [ providerTrigger ] else []
+          if manageRedisProvider(cfg) then [ providerTrigger ] + (
+            if syncsProviderSecret then [] else [ providerSecretTrigger ]
+          ) else []
         ),
       template: template(cfg, name, redisProvider),
     },
@@ -367,10 +375,8 @@ local managedResource(name, redisProvider) =
 
 local validRedisProvider(name, redisProvider) =
   local cfg = config(name);
-  local authSecretName = redisProviderAuthSecretName(redisProvider);
   assert !manageRedisProvider(cfg) || redisProviderName(redisProvider) != '' : 'redisSecretSync requires the RedisProvider to have a name';
-  assert !manageRedisProvider(cfg) || authSecretName != '' : 'redisSecretSync requires the RedisProvider to set spec.auth.password.secretRef.name';
-  assert !manageRedisProvider(cfg) || passwordSource(cfg, authSecretName) != null : 'redisSecretSync requires the secret %s to map a source for %s' % [ authSecretName, redisPasswordKey ];
+  assert !manageRedisProvider(cfg) || redisProviderAuthSecretName(redisProvider) != '' : 'redisSecretSync requires the RedisProvider to set spec.auth.password.secretRef.name';
   true;
 
 {
